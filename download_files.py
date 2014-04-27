@@ -1,3 +1,11 @@
+#!python
+# vim: set fileencoding=utf-8 shiftwidth=4 tabstop=4 expandtab smartindent :
+
+"""
+Download all files from ec.europa.eu.
+Files will be stored in the "input" directory.
+"""
+
 # Code blatantly stolen from: http://stackoverflow.com/questions/22676/how-do-i-download-a-file-over-http-using-python user http://stackoverflow.com/users/2357007/stan
 # Licensed under CC BY-SA 2.5 according to http://stackexchange.com/legal/terms-of-service
 
@@ -9,7 +17,7 @@
 
 from __future__ import ( division, absolute_import, print_function, unicode_literals )
 
-import sys, os, tempfile, logging
+import sys, os, tempfile, logging, shutil
 
 if sys.version_info >= (3,):
     import urllib.request as urllib2
@@ -57,7 +65,15 @@ def download_file(url, desc=None):
     return filename
 
 urls = ["http://ec.europa.eu/internal_market/consultations/docs/2013/copyright/registered_en.zip", "http://ec.europa.eu/internal_market/consultations/docs/2013/copyright/users_en.zip", "http://ec.europa.eu/internal_market/consultations/docs/2013/copyright/other-stakeholders_en.zip"]
+
+if not os.path.isdir("input"):
+    os.mkdir("input")
+os.chdir("input")
+
 for url in urls:
-	if not os.path.exists(url.split("/")[-1]):
-		filename = download_file(url)
-		print(filename)
+    basename = url.split("/")[-1]
+    if os.path.exists(os.path.join("..", basename)):
+        shutil.move(os.path.join("..", basename), ".")
+    elif not os.path.exists(basename):
+        filename = download_file(url)
+        print(filename)
