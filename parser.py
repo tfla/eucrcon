@@ -70,11 +70,44 @@ class OdfReader:
                     self.text_in_paras.append(ch.data)
 
     def findIt(self,name):
-        for s in self.text_in_paras:
-            print s.encode('utf-8')
-            if name in s:
-               print s.encode('utf-8')
-
+        for s in range(len(self.text_in_paras)):
+#            print s.encode('utf-8')
+            if name in self.text_in_paras[s]:
+               print self.text_in_paras[s+1].encode('utf-8'), self.text_in_paras[s+3].encode('utf-8') 
+               
+def findStyles(odtfile, styletag = 'style:text-underline-type'):
+    """
+    This function will search through the file 'content.xml' to find
+    the styles that underline the text in the file.
+    """
+    zipodt = zipfile.ZipFile(odtfile)
+    cont = zipodt.read('content.xml')
+    doc = xml.dom.minidom.parseString(cont)
+    
+    # Sees if there exist a child with tag office:automatic-styles
+    templist = doc.getElementsByTagName("office:automatic-styles")    
+    if len( templist ) == 1:
+        allstyles = templist[0]
+    elif len( templist ) > 1:
+        return "Too many tags with name office:automatic-styles in content.xml!"
+    else: return "No tag with name office:automatic-styles in content.xml!"
+    
+    #find those styles that are underlined
+    underlinenodes = []
+    for nod in allstyles.childNodes:
+        if nod.hasChildNodes():
+            for chlnod in nod.getElementsByTagName('style:text-properties'):
+                if chlnod.hasAttributes():
+                    if chlnod.hasAttribute(styletag):
+                        underlinenodes.append(nod)
+    
+    #printing the names of the styles for checking. Remove this later
+    for nod in underlinenodes:
+        if nod.hasAttribute('style:name'):
+            print nod.getAttribute('style:name')
+    
+    return underlinenodes
+    
 
 if __name__ == '__main__':
     """
@@ -82,8 +115,10 @@ if __name__ == '__main__':
     you want to search. It will find the paragraphs where phrase matches
     and print the paragraph
     """
-    filename = 'a.-alcubilla_en.odt' #sys.argv[0] 
-    phrase =  'In particular'#sys.argv[1]
+    filename = 'input/TMP/a.-alcubilla_en.odt' #sys.argv[0] 
+    phrase =  'Name:'#sys.argv[1]
+    findStyles(filename)
+    """
     if zipfile.is_zipfile(filename):
         myodf = OdfReader(filename) # Create object.
         myodf.showManifest()        # Tell me what files
@@ -91,3 +126,4 @@ if __name__ == '__main__':
         myodf.getContents()         # Get the raw
                                     # paragraph text.
         myodf.findIt(phrase)        # find the phrase ...
+    """
