@@ -135,11 +135,12 @@ def main():
                 print("File extensions:")
                 for extension in zip.getExtensions():
                     print("  %-6s: %5d" % (extension, zip.getCountInExtension(extension)))
-            print("NUMBER OF FILES: %d" % (zip.getCount()))
-            print("")
-            count += zip.getCount()
-    print("")
-    print("TOTAL NUMBER OF FILES: %d" % (count))
+                print("NUMBER OF FILES: %d" % (zip.getCount()))
+                print("")
+                count += zip.getCount()
+    if args.command == "stats":
+        print("")
+        print("TOTAL NUMBER OF FILES: %d" % (count))
 
 
 if __name__ == "__main__":
