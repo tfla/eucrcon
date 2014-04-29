@@ -1,4 +1,17 @@
 #!python
+# vim: set fileencoding=utf-8 shiftwidth=4 tabstop=4 expandtab smartindent :
+
+"""
+Defines a Form and a FormQuestion
+"""
+
+# Note to self: Keep this script working with
+# both "python" (2.7.x) and "python3"!
+
+__author__ = "Henrik Laban Torstensson, Andreas Söderlund, Timmy Larsson"
+__license__ = "MIT"
+
+
 
 class Form:
     """Holds interesting data from one response file (odt)

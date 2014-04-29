@@ -1,10 +1,20 @@
+#!python
+# vim: set fileencoding=utf-8 shiftwidth=4 tabstop=4 expandtab smartindent :
+
+"""
+Parsing test by Laban
+Find all text:list elements in an ODT file and print the text content
+"""
+
+# Note to self: Keep this script working with
+# both "python" (2.7.x) and "python3"!
+
+__author__ = "Henrik Laban Torstensson, Andreas Söderlund, Timmy Larsson"
+__license__ = "MIT"
+
+
 import re
 import xml.dom.minidom
-
-"""Parsing test by Laban
-
-Find all text:list elements in an ODT file and print the text content.
-"""
 
 def getTextRecursive(element):
     text = []
