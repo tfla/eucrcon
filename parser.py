@@ -1,18 +1,8 @@
-#!python
-# vim: set fileencoding=utf-8 shiftwidth=4 tabstop=4 expandtab smartindent :
-
-"""
-An ODT-parser based on work by Kamran Husain.
-"""
-
-# Note to self: Keep this script working with
-# both "python" (2.7.x) and "python3"!
-
-__author__ = "Henrik Laban Torstensson, Andreas Söderlund, Timmy Larsson"
-__license__ = "MIT"
-
-
-
+#
+# This program will list out the uniq tag
+# names in a XML document.
+# Author: Kamran Husain
+#
 from parsing_test_laban import getTextRecursive
 import os, sys
 import zipfile as zf
@@ -154,7 +144,7 @@ def findAnswers(odtfile,questfile):
         tmpstring = tmpfile.read()
         questlist = tmpstring.split('\n')[:-1] #The last element is empty and should be ignored.
     
-    print( len(questlist),"\n")
+#    print( len(questlist),"\n")
     zipodt = zf.ZipFile(odtfile)
     cont = zipodt.read('content.xml')
     doc = xml.dom.minidom.parseString(cont)
@@ -172,11 +162,11 @@ def findAnswers(odtfile,questfile):
 #        print( paragraphtext)
 #        print questlist[questcounter]
         if questlist[questcounter] in paragraphtext:
-            print( "Hello!")
+#            print( "Hello!")
             questcounter = questcounter + 1
             startindex = i
             break
-    print( startindex)
+#    print( startindex)
     foundans = False #A Boolean that indicates if a question has been answered
     # This part searches through the children until it finds an underlined part
     for i in range(startindex,len(paras)):
@@ -187,9 +177,10 @@ def findAnswers(odtfile,questfile):
 #        print( questlist[questcounter].encode('utf-8'))
 #        print( paragraphtext.encode('utf-8'))
 #        print( anslist)
-        if questlist[questcounter] in paragraphtext:
-            print(paragraphtext)
-            print()
+        if questcounter >= len(questlist): pass
+        elif questlist[questcounter] in paragraphtext:
+#            print(paragraphtext)
+#            print()
             if not foundans: anslist.append('NO COMMENT') # If it got to the next question without finding an answer it adds NO COMMENT
             questcounter = questcounter + 1
             foundans = False
@@ -201,6 +192,12 @@ def findAnswers(odtfile,questfile):
                         paragraphtext = paragraphtext + ch.data
                 anslist.append(paragraphtext)
                 foundans = True
+    
+    #The code doesn't find the last unaswered question. When we add the ability
+    #to store [open question] this should be changed! For now, it just adds
+    #a last unanswered tag for the last question.
+    if len(anslist) == 79:
+        anslist.append('NO COMMENT')
     return anslist
 if __name__ == '__main__':
     """
@@ -212,6 +209,7 @@ if __name__ == '__main__':
     phrase =  'Name:'#sys.argv[1]
     e = findAnswers(filename,'quest_stub')
     print( len(e))
+    print()
     for i in e:
         print(i)
     """
