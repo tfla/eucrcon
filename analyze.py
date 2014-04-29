@@ -23,41 +23,38 @@ if sys.version_info >= (3,):
 else:
     from cStringIO import StringIO
 
-class ConsultationZip:
+class ConsultationZipHandler:
     """
-    Class representing a zip file with consultation form responses
+    Class analyzing zip files with consultation form responses
     """
 
-    def __init__(self, filename):
-        self.filename = filename
-        self.zipFile = zipfile.ZipFile(self.filename)
-        self.index()
+    def __init__(self):
+        self.categoryDict = {}
+        self.count = 0
+        self.extensionDict = {}
+        self.fileList = []
+        self.zipFiles = {} # filename -> ZipFile object
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, traceback):
-        pass
-
-    def index(self):
+    def addZip(self, zipFilename):
         """Read statistics in zip file
         """
 
-        self.categoryDict = {}
-        self.extensionDict = {}
-        self.count = 0
-        self.fileList = []
+        zipFile = zipfile.ZipFile(zipFilename)
+        self.zipFiles[zipFilename] = zipFile # Save in class dict
+
+        count = 0
 
         # Loop through all files in the zip file
         # and count the number of files in different
         # categories and with different extensions
-        for filename in self.zipFile.namelist():
+        for filename in zipFile.namelist():
             category = os.path.dirname(filename)
             formName = os.path.basename(filename)
             if formName == "":
                 # Directory entry
                 continue
             self.fileList.append(formName)
+            count += 1
             self.count += 1
             extension = formName.split(".")[-1]
             if category in self.categoryDict.keys():
@@ -70,7 +67,6 @@ class ConsultationZip:
             else:
                 extensionDict = {extension: {"count": 1}}
                 self.extensionDict[extension] = {"count": 1}
-
 
     def listFiles(self):
         return self.fileList
@@ -116,32 +112,34 @@ def main():
 
     print("")
     count = 0
+    zip = ConsultationZipHandler()
     for zipFile in args.files:
         print("Handling %s..." % (zipFile))
-        
-        with ConsultationZip(zipFile) as zip:
-            if args.command == "list-forms":
-                print("List of consultation forms:")
-                for file in zip.listFiles():
-                    try:
-                        print("* %s" % (file))
-                    except UnicodeEncodeError:
-                        print("ERROR: Encoding error")
-            elif args.command == "stats":
-                print("Categories:")
-                categories = zip.getCategories()
-                for category in categories:
-                    print("  %-55s: %5d" % (category, zip.getCountInCategory(category)))
-                print("File extensions:")
-                for extension in zip.getExtensions():
-                    print("  %-6s: %5d" % (extension, zip.getCountInExtension(extension)))
-                print("NUMBER OF FILES: %d" % (zip.getCount()))
-                print("")
-                count += zip.getCount()
-    if args.command == "stats":
-        print("")
-        print("TOTAL NUMBER OF FILES: %d" % (count))
+        zip.addZip(zipFile)
 
+    print("")
+    if args.command == "list-forms":
+        print("List of consultation forms:")
+        for file in zip.listFiles():
+            try:
+                print("* %s" % (file))
+            except UnicodeEncodeError:
+                print("ERROR: Encoding error")
+    elif args.command == "stats":
+        print("Categories:")
+        categories = zip.getCategories()
+        for category in categories:
+            print("  %-55s: %5d" % (category, zip.getCountInCategory(category)))
+        print()
+        print("File extensions:")
+        for extension in zip.getExtensions():
+            print("  %-6s: %5d" % (extension, zip.getCountInExtension(extension)))
+        print("")
+        print("NUMBER OF FILES: %d" % (zip.getCount()))
+        print("")
+        count += zip.getCount()
+    elif args.command == "analyze":
+        pass
 
 if __name__ == "__main__":
     main()
