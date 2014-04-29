@@ -10,7 +10,7 @@ unicode better.
 # Note to self: Keep this script working with
 # both "python" (2.7.x) and "python3"!
 
-__author__ = "Henrik Laban Torstensson, Andreas Söderlund, Timmy Larsson"
+__author__ = "Henrik Laban Torstensson, Andreas SÃÂÃÂÃÂÃÂ¶derlund, Timmy Larsson"
 __license__ = "MIT"
 
 import argparse
@@ -45,6 +45,8 @@ class ConsultationZip:
 
         self.categoryDict = {}
         self.extensionDict = {}
+        self.count = 0
+        self.fileList = []
 
         # Loop through all files in the zip file
         # and count the number of files in different
@@ -55,6 +57,8 @@ class ConsultationZip:
             if formName == "":
                 # Directory entry
                 continue
+            self.fileList.append(formName)
+            self.count += 1
             extension = formName.split(".")[-1]
             if category in self.categoryDict.keys():
                 self.categoryDict[category]["count"] += 1
@@ -69,7 +73,10 @@ class ConsultationZip:
 
 
     def listFiles(self):
-        return self.zipFile.namelist()
+        return self.fileList
+
+    def getCount(self):
+        return self.count
 
     def getCategories(self):
         return sorted(self.categoryDict.keys())
@@ -108,6 +115,7 @@ def main():
     print("\n".join(map(lambda s: "* %s" % (s), args.files)))
 
     print("")
+    count = 0
     for file in args.files:
         print("Handling %s..." % (file))
         
@@ -123,6 +131,11 @@ def main():
                 print("File extensions:")
                 for extension in zip.getExtensions():
                     print("  %-6s: %5d" % (extension, zip.getCountInExtension(extension)))
+            print("NUMBER OF FILES: %d" % (zip.getCount()))
+            print("")
+            count += zip.getCount()
+    print("")
+    print("TOTAL NUMBER OF FILES: %d" % (count))
 
 
 if __name__ == "__main__":
