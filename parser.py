@@ -1,8 +1,18 @@
-#
-# This program will list out the uniq tag
-# names in a XML document.
-# Author: Kamran Husain
-#
+#!python
+# vim: set fileencoding=utf-8 shiftwidth=4 tabstop=4 expandtab smartindent :
+
+"""
+An ODT-parser based on work by Kamran Husain.
+"""
+
+# Note to self: Keep this script working with
+# both "python" (2.7.x) and "python3"!
+
+__author__ = "Henrik Laban Torstensson, Andreas Söderlund, Timmy Larsson"
+__license__ = "MIT"
+
+
+
 from parsing_test_laban import getTextRecursive
 import os, sys
 import zipfile as zf
