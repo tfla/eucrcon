@@ -33,6 +33,7 @@ class ConsultationZipHandler:
         self.count = 0
         self.extensionDict = {}
         self.fileList = []
+        self.languageDict = {}
         self.zipFiles = {} # filename -> ZipFile object
 
     def addZip(self, zipFilename):
@@ -53,15 +54,37 @@ class ConsultationZipHandler:
                 continue
             self.fileList.append(formName)
             self.count += 1
+
+            # Category
             if category in self.categoryDict.keys():
                 self.categoryDict[category]["count"] += 1
             else:
                 self.categoryDict[category] = {"count": 1}
+
+            # Extension
             extension = formName.split(".")[-1]
             if extension in self.extensionDict.keys():
                 self.extensionDict[extension]["count"] += 1
             else:
                 self.extensionDict[extension] = {"count": 1}
+
+            # Language
+            languageSplit = ".".join(formName.split(".")[:-1]).split("_") #TODO: Split also on "." and "-"
+            if len(languageSplit) == 0:
+                language = "??"
+            else:
+                if len(languageSplit[-1]) < 5:
+                    language = languageSplit[-1].lower().strip("-").rstrip(".").lstrip("(").rstrip(")")
+                    if len(language) != 2:
+                        language = "??"
+                else:
+                    language = "??"
+            if language in (None, ""):
+                language = "??"
+            if language in self.languageDict.keys():
+                self.languageDict[language]["count"] += 1
+            else:
+                self.languageDict[language] = {"count": 1}
 
     def listFiles(self):
         return self.fileList
@@ -80,7 +103,18 @@ class ConsultationZipHandler:
 
     def getCountInExtension(self, extension):
         return self.extensionDict[extension]["count"]
-        
+
+    def getLanguages(self):
+        return sorted(self.languageDict.keys())
+
+    def getCountInLanguage(self, language):
+        return self.languageDict[language]["count"]
+
+    def getLanguageCount(self):
+        resList = []
+        for (lang, langDict) in self.languageDict.items():
+            resList.append((lang, langDict["count"]))
+        return sorted(resList, reverse=True, key=lambda tuple: tuple[1])
 
 def main():
     """Main function for running the analyzer.
@@ -125,10 +159,14 @@ def main():
         categories = zip.getCategories()
         for category in categories:
             print("  %-55s: %5d" % (category, zip.getCountInCategory(category)))
-        print()
+        print("")
         print("File extensions:")
         for extension in zip.getExtensions():
-            print("  %-6s: %5d" % (extension, zip.getCountInExtension(extension)))
+            print("  %-4s: %5d" % (extension, zip.getCountInExtension(extension)))
+        print("")
+        print("Languages:")
+        for (lang, count) in zip.getLanguageCount():
+            print("  %-2s: %5d" % (lang, count))
         print("")
         print("NUMBER OF FILES: %d" % (zip.getCount()))
         print("")
