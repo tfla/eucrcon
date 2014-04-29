@@ -41,7 +41,7 @@ class OdfReader:
         Open an ODF file.
         """
         self.filename = filename
-        self.m_odf = zipfile.ZipFile(filename)
+        self.m_odf = zf.ZipFile(filename)
         self.filelist = self.m_odf.infolist()
 
     def showManifest(self):
@@ -51,7 +51,7 @@ class OdfReader:
         for s in self.filelist:
             #print s.orig_filename, s.date_time,
             s.filename, s.file_size, s.compress_size
-            print s.orig_filename
+#            print s.orig_filename
 
     def getContents(self):
         """
@@ -60,7 +60,7 @@ class OdfReader:
         ostr = self.m_odf.read('content.xml')
         doc = xml.dom.minidom.parseString(ostr)
         paras = doc.getElementsByTagName('text:p')
-        print "I have ", len(paras), " paragraphs "
+#        print "I have ", len(paras), " paragraphs "
         self.text_in_paras = []
         for p in paras:
             for ch in p.childNodes:
@@ -69,9 +69,9 @@ class OdfReader:
 
     def findIt(self,name):
         for s in range(len(self.text_in_paras)):
-#            print s.encode('utf-8')
+            print( s.encode('utf-8'))
             if name in self.text_in_paras[s]:
-               print self.text_in_paras[s].encode('utf-8') 
+               print( self.text_in_paras[s].encode('utf-8')) 
             
 def findName(odtfile, nametag='Name:'):
     """
@@ -93,7 +93,7 @@ def findName(odtfile, nametag='Name:'):
                         if cn.nodeType == cn.TEXT_NODE:
                             ans = ans + cn.data + " "
                     #Remove print when done.
-                    print ans
+                    print( ans)
                     return ans
     return "Counld not find the string {}".format(nametag)
 
@@ -144,8 +144,7 @@ def findAnswers(odtfile,questfile):
         tmpstring = tmpfile.read()
         questlist = tmpstring.split('\n')[:-1] #The last element is empty and should be ignored.
     
-    print len(questlist),"\n"
-    
+    print( len(questlist),"\n")
     zipodt = zf.ZipFile(odtfile)
     cont = zipodt.read('content.xml')
     doc = xml.dom.minidom.parseString(cont)
@@ -160,34 +159,38 @@ def findAnswers(odtfile,questfile):
 #        for ch in paras[i].childNodes:
 #                if ch.nodeType == ch.TEXT_NODE:
 #                    paragraphtext = paragraphtext + ch.data
-        print paragraphtext
+#        print( paragraphtext)
 #        print questlist[questcounter]
         if questlist[questcounter] in paragraphtext:
-            print "Hello!"
+            print( "Hello!")
             questcounter = questcounter + 1
             startindex = i
             break
-    print startindex
-
+    print( startindex)
+    foundans = False #A Boolean that indicates if a question has been answered
     # This part searches through the children until it finds an underlined part
     for i in range(startindex,len(paras)):
         paragraphtext = getTextRecursive(paras[i])
 #        for ch in paras[i].childNodes:
 #            if ch.nodeType == ch.TEXT_NODE:
 #                paragraphtext = paragraphtext + ch.data
-        print questlist[questcounter].encode('utf-8')
-        print paragraphtext.encode('utf-8')
-        print anslist
-        try questlist[questcounter] in paragraphtext:
-            if len(anslist)<questcounter: anslist.append('NO COMMENT') # If it got to the next question without finding an answer it adds NO COMMENT
+#        print( questlist[questcounter].encode('utf-8'))
+#        print( paragraphtext.encode('utf-8'))
+#        print( anslist)
+        if questlist[questcounter] in paragraphtext:
+            print(paragraphtext)
+            print()
+            if not foundans: anslist.append('NO COMMENT') # If it got to the next question without finding an answer it adds NO COMMENT
             questcounter = questcounter + 1
+            foundans = False
         if paras[i].hasAttribute('text:style-name'):
             if paras[i].getAttribute('text:style-name') in underlinedstyles: # It checks if the style is among the styles that underlines the text
                 paragraphtext = ''
                 for ch in paras[i].childNodes:
                     if ch.nodeType == ch.TEXT_NODE:
                         paragraphtext = paragraphtext + ch.data
-                anslist.append(paragraphtext) 
+                anslist.append(paragraphtext)
+                foundans = True
     return anslist
 if __name__ == '__main__':
     """
@@ -198,7 +201,9 @@ if __name__ == '__main__':
     filename = 'input/TMP/a.-alcubilla_en.odt' #sys.argv[0] 
     phrase =  'Name:'#sys.argv[1]
     e = findAnswers(filename,'quest_stub')
-    print len(e)
+    print( len(e))
+    for i in e:
+        print(i)
     """
     if zipfile.is_zipfile(filename):
         myodf = OdfReader(filename) # Create object.

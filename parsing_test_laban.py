@@ -28,11 +28,11 @@ def main():
     dom = xml.dom.minidom.parseString(fileContent)
 
     textLists = dom.getElementsByTagName("text:list")
-    print len(textLists)
-    print
+    print( len(textLists))
+    print()
     for item in textLists:
-        print getTextRecursive(item)
-        print
+        print( getTextRecursive(item))
+        print()
 
 if __name__ == "__main__":
     main()
