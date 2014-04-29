@@ -3,7 +3,7 @@
 # names in a XML document.
 # Author: Kamran Husain
 #
-
+from parsing_test_laban import getTextRecursive
 import os, sys
 import zipfile as zf
 from xml.sax import parse, ContentHandler
@@ -123,14 +123,72 @@ def findStyles(odtfile, styletag = 'style:text-underline-type'):
                     if chlnod.hasAttribute(styletag):
                         underlinenodes.append(nod)
     
-    #printing the names of the styles for checking. Remove this later
+    #Listing the nodes and putting their names in a list.
+    underlinelist = []
     for nod in underlinenodes:
         if nod.hasAttribute('style:name'):
-            print nod.getAttribute('style:name')
+            underlinelist.append(nod.getAttribute('style:name'))
     
-    return underlinenodes
+    return underlinelist
     
+def findAnswers(odtfile,questfile):
+    """
+    This function finds the answers in the odtfile by searching for each string
+    in the questfile in succession through the text:p parts and returning the
+    underlined answer between the question. If no underline is found
+    NO RESPONSE is returned.
+    """
+    underlinedstyles = findStyles(odtfile)
+    questlist = []
+    with open(questfile,'r') as tmpfile:
+        tmpstring = tmpfile.read()
+        questlist = tmpstring.split('\n')[:-1] #The last element is empty and should be ignored.
+    
+    print len(questlist),"\n"
+    
+    zipodt = zf.ZipFile(odtfile)
+    cont = zipodt.read('content.xml')
+    doc = xml.dom.minidom.parseString(cont)
+    
+    paras = doc.getElementsByTagName('text:p')
+    anslist = []
+    # This part finds the first question and saves that place using the index i
+    questcounter = 0 #Used to see if the paragraph matches one of the questions
+    startindex = 0
+    for i in range(len(paras)):
+        paragraphtext = getTextRecursive(paras[i])
+#        for ch in paras[i].childNodes:
+#                if ch.nodeType == ch.TEXT_NODE:
+#                    paragraphtext = paragraphtext + ch.data
+        print paragraphtext
+#        print questlist[questcounter]
+        if questlist[questcounter] in paragraphtext:
+            print "Hello!"
+            questcounter = questcounter + 1
+            startindex = i
+            break
+    print startindex
 
+    # This part searches through the children until it finds an underlined part
+    for i in range(startindex,len(paras)):
+        paragraphtext = getTextRecursive(paras[i])
+#        for ch in paras[i].childNodes:
+#            if ch.nodeType == ch.TEXT_NODE:
+#                paragraphtext = paragraphtext + ch.data
+        print questlist[questcounter].encode('utf-8')
+        print paragraphtext.encode('utf-8')
+        print anslist
+        try questlist[questcounter] in paragraphtext:
+            if len(anslist)<questcounter: anslist.append('NO COMMENT') # If it got to the next question without finding an answer it adds NO COMMENT
+            questcounter = questcounter + 1
+        if paras[i].hasAttribute('text:style-name'):
+            if paras[i].getAttribute('text:style-name') in underlinedstyles: # It checks if the style is among the styles that underlines the text
+                paragraphtext = ''
+                for ch in paras[i].childNodes:
+                    if ch.nodeType == ch.TEXT_NODE:
+                        paragraphtext = paragraphtext + ch.data
+                anslist.append(paragraphtext) 
+    return anslist
 if __name__ == '__main__':
     """
     Change phrase to the search string and filename to the .odt file
@@ -139,7 +197,8 @@ if __name__ == '__main__':
     """
     filename = 'input/TMP/a.-alcubilla_en.odt' #sys.argv[0] 
     phrase =  'Name:'#sys.argv[1]
-    e = findName(filename)
+    e = findAnswers(filename,'quest_stub')
+    print len(e)
     """
     if zipfile.is_zipfile(filename):
         myodf = OdfReader(filename) # Create object.
