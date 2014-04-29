@@ -10,7 +10,7 @@ unicode better.
 # Note to self: Keep this script working with
 # both "python" (2.7.x) and "python3"!
 
-__author__ = "Henrik Laban Torstensson, Andreas SÃÂÃÂÃÂÃÂ¶derlund, Timmy Larsson"
+__author__ = "Henrik Laban Torstensson, Andreas Söderlund, Timmy Larsson"
 __license__ = "MIT"
 
 import argparse
@@ -116,13 +116,17 @@ def main():
 
     print("")
     count = 0
-    for file in args.files:
-        print("Handling %s..." % (file))
+    for zipFile in args.files:
+        print("Handling %s..." % (zipFile))
         
-        with ConsultationZip(file) as zip:
+        with ConsultationZip(zipFile) as zip:
             if args.command == "list-forms":
                 print("List of consultation forms:")
-                print("\n".join(map(lambda s: "* %s" % (s), zip.listFiles())))
+                for file in zip.listFiles():
+                    try:
+                        print("* %s" % (file))
+                    except UnicodeEncodeError:
+                        print("ERROR: Encoding error")
             elif args.command == "stats":
                 print("Categories:")
                 categories = zip.getCategories()
