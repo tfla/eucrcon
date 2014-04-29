@@ -1,77 +1,11 @@
-#
-# This program will list out the uniq tag
-# names in a XML document.
-# Author: Kamran Husain
-#
+#!python
+# vim: set fileencoding=utf-8 shiftwidth=4 tabstop=4 expandtab smartindent :
+
 from parsing_test_laban import getTextRecursive
 import os, sys
 import zipfile as zf
 from xml.sax import parse, ContentHandler
-
-class tagHandler(ContentHandler):
-    def __init__(self, tagName = None):
-        self.tag = tagName
-        self.uniq = {}
-
-    def startElement(self,name,attr):
-        if self.tag == None:
-            self.uniq[name] = 1;
-        elif self.tag == name:
-            self.uniq[name] = name
-        # ignore attributes for now
-
-    def getNames(self):
-        return self.uniq.keys()
-"""
-if __name__ == '__main__':
-    test = zf.ZipFile('a.-alcubilla_en.odt')
-    ary = test.read('content.xml')
-    myTagHandler = tagHandler()
-    parse(ary, myTagHandler)
-    myNames = [str(x) for x in myTagHandler.getNames()]
-    myNames.sort()
-    for x in myNames: print x
-"""
-
 import xml.dom.minidom
-
-class OdfReader:
-    def __init__(self,filename):
-        """
-        Open an ODF file.
-        """
-        self.filename = filename
-        self.m_odf = zf.ZipFile(filename)
-        self.filelist = self.m_odf.infolist()
-
-    def showManifest(self):
-        """
-        Just tell me what files exist in the ODF file.
-        """
-        for s in self.filelist:
-            #print s.orig_filename, s.date_time,
-            s.filename, s.file_size, s.compress_size
-#            print s.orig_filename
-
-    def getContents(self):
-        """
-        Just read the paragraphs from an XML file.
-        """
-        ostr = self.m_odf.read('content.xml')
-        doc = xml.dom.minidom.parseString(ostr)
-        paras = doc.getElementsByTagName('text:p')
-#        print "I have ", len(paras), " paragraphs "
-        self.text_in_paras = []
-        for p in paras:
-            for ch in p.childNodes:
-                if ch.nodeType == ch.TEXT_NODE:
-                    self.text_in_paras.append(ch.data)
-
-    def findIt(self,name):
-        for s in range(len(self.text_in_paras)):
-            print( s.encode('utf-8'))
-            if name in self.text_in_paras[s]:
-               print( self.text_in_paras[s].encode('utf-8')) 
             
 def findName(odtfile, nametag='Name:'):
     """
@@ -180,7 +114,7 @@ def findAnswers(odtfile,questfile):
         if questcounter >= len(questlist): pass
         elif questlist[questcounter] in paragraphtext:
 #            print(paragraphtext)
-#            print()
+#            print('')
             if not foundans: anslist.append('NO COMMENT') # If it got to the next question without finding an answer it adds NO COMMENT
             questcounter = questcounter + 1
             foundans = False
@@ -209,7 +143,7 @@ if __name__ == '__main__':
     phrase =  'Name:'#sys.argv[1]
     e = findAnswers(filename,'quest_stub')
     print( len(e))
-    print()
+    print('')
     for i in e:
         print(i)
     """
