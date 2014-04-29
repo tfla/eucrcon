@@ -42,8 +42,6 @@ class ConsultationZipHandler:
         zipFile = zipfile.ZipFile(zipFilename)
         self.zipFiles[zipFilename] = zipFile # Save in class dict
 
-        count = 0
-
         # Loop through all files in the zip file
         # and count the number of files in different
         # categories and with different extensions
@@ -54,18 +52,15 @@ class ConsultationZipHandler:
                 # Directory entry
                 continue
             self.fileList.append(formName)
-            count += 1
             self.count += 1
-            extension = formName.split(".")[-1]
             if category in self.categoryDict.keys():
                 self.categoryDict[category]["count"] += 1
             else:
-                extensionDict = {extension: {"count": 1}}
                 self.categoryDict[category] = {"count": 1}
+            extension = formName.split(".")[-1]
             if extension in self.extensionDict.keys():
                 self.extensionDict[extension]["count"] += 1
             else:
-                extensionDict = {extension: {"count": 1}}
                 self.extensionDict[extension] = {"count": 1}
 
     def listFiles(self):
