@@ -6,3 +6,4 @@
 *.odt
 *.odt#
 input/
+/responses.sqlite

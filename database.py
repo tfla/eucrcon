@@ -13,97 +13,99 @@ __license__ = "MIT"
 
 import sqlite3
 
-c = None
-
 class Database():
-    def __init__(self, database='responses.sqlite'):
-        global c
-        conn = sqlite3.connect(database)
-        c = conn.cursor()
+    """Represents a SQLite database"""
 
-        c.execute('''SELECT name FROM sqlite_master WHERE type='table' ORDER BY name''')
-        ans = c.fetchall()
-        if (ans == [('answers',), ('forms',), ('questions',)]):
-            pass
-        if (ans == [('answers',), ('forms',)]):
-            c.execute('''CREATE TABLE questions (id INTEGER PRIMARY KEY AUTOINCREMENT, question TEXT, type TEXT)''')
-        if (ans == [('answers',), ('questions',)]):
-            c.execute('''CREATE TABLE forms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT)''')
-        if (ans == [('forms',), ('questions',)]):
-            c.execute('''CREATE TABLE answers (id INTEGER PRIMARY KEY AUTOINCREMENT, num INTEGER, question INTEGER, choice TEXT, freeText TEXT)''')
-        if (ans == [('answers',)]):
-            c.execute('''CREATE TABLE forms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT)''')
-            c.execute('''CREATE TABLE questions (id INTEGER PRIMARY KEY AUTOINCREMENT, question TEXT, type TEXT)''')
-        if (ans == [('forms',)]):
-            c.execute('''CREATE TABLE questions (id INTEGER PRIMARY KEY AUTOINCREMENT, question TEXT, type TEXT)''')
-            c.execute('''CREATE TABLE answers (id INTEGER PRIMARY KEY AUTOINCREMENT, num INTEGER, question INTEGER, choice TEXT, freeText TEXT)''')
-        if (ans == [('questions',)]):
-            c.execute('''CREATE TABLE forms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT)''')
-            c.execute('''CREATE TABLE answers (id INTEGER PRIMARY KEY AUTOINCREMENT, num INTEGER, question INTEGER, choice TEXT, freeText TEXT)''')
-        if (ans == []):
-            c.execute('''CREATE TABLE forms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT)''')
-            c.execute('''CREATE TABLE questions (id INTEGER PRIMARY KEY AUTOINCREMENT, question TEXT, type TEXT)''')
-            c.execute('''CREATE TABLE answers (id INTEGER PRIMARY KEY AUTOINCREMENT, num INTEGER, question INTEGER, choice TEXT, freeText TEXT)''')
+    def __init__(self, database='responses.sqlite'):
+        """Initialize a connection to the database <database> and
+        create tables needed if they don't exist."""
+
+        conn = sqlite3.connect(database)
+        self.cur = conn.cursor()
+
+        self.cur.execute('''SELECT name FROM sqlite_master WHERE type='table' ORDER BY name''')
+        ans = self.cur.fetchall()
+
+        if not ('answers',) in ans:
+            print("Creating table 'answers'...")
+            self.cur.execute('''CREATE TABLE answers (id INTEGER PRIMARY KEY AUTOINCREMENT, num INTEGER, question INTEGER, choice TEXT, freeText TEXT)''')
+        if not ('forms',) in ans:
+            print("Creating table 'forms'...")
+            self.cur.execute('''CREATE TABLE forms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT)''')
+        if not ('questions',) in ans:
+            print("Creating table 'questions'...")
+            self.cur.execute('''CREATE TABLE questions (id INTEGER PRIMARY KEY AUTOINCREMENT, question TEXT, type TEXT)''')
 
     def putQuestion(self, question, _type):
         for tmp in [(question, _type)]:
-            c.execute('INSERT INTO questions VALUES (NULL, ?, ?)', tmp)
+            self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?)', tmp)
         
     def listQuestions(self):
-        questions = c.execute('SELECT * FROM questions ORDER BY id')
+        questions = self.cur.execute('SELECT * FROM questions ORDER BY id')
         return questions.fetchall()
         
     def getQuestion(self, _id):
-        question = c.execute('SELECT * FROM questions WHERE id=?', _id)
+        question = self.cur.execute('SELECT * FROM questions WHERE id=?', _id)
         return question.fetchall()
         
     def getQuestionsByType(self, _type):
-        questions = c.execute('SELECT * FROM questions WHERE type=?', _type)
+        questions = self.cur.execute('SELECT * FROM questions WHERE type=?', _type)
         return questions.fetchall()
         
     def putAnswer(self, num, question, choice, freeText):
         for tmp in [(num, question, choice, freeText)]:
-            c.execute('INSERT INTO questions VALUES (NULL, ?, ?)', tmp)
+            self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?)', tmp)
 
     def listAnswers(self):
-        answers = c.execute('SELECT * FROM answers ORDER BY id')
+        answers = self.cur.execute('SELECT * FROM answers ORDER BY id')
         return answers.fetchall()
     
     def getAnswer(self, _id):
-        answer = c.execute('SELECT * FROM answers WHERE id=?', _id)
+        answer = self.cur.execute('SELECT * FROM answers WHERE id=?', _id)
         return answer.fetchall()
         
     def getAnswerByNum(self, num):
-        answer = c.execute('SELECT * FROM answers WHERE num=?', num)
+        answer = self.cur.execute('SELECT * FROM answers WHERE num=?', num)
         return answer.fetchall()
         
     def getAnswerByQuestion(self, question):
-        answer = c.execute('SELECT * FROM answers WHERE question=?', question)
+        answer = self.cur.execute('SELECT * FROM answers WHERE question=?', question)
         return answer.fetchall()
         
     def getAnswerByChoice(self, choice):
-        answer = c.execute('SELECT * FROM answers WHERE choice=?', choice)
+        answer = self.cur.execute('SELECT * FROM answers WHERE choice=?', choice)
         return answer.fetchall()
         
     def putForm(self, name, _type):
         for tmp in [(name, _type)]:
-            c.execute('INSERT INTO questions VALUES (NULL, ?, ?)', tmp)
+            self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?)', tmp)
         
     def listForms(self):
-        forms = c.execute('SELECT * FROM forms ORDER BY id')
+        forms = self.cur.execute('SELECT * FROM forms ORDER BY id')
         return forms.fetchall()
 
     def getForm(self, _id):
-        form = c.execute('SELECT * FROM forms WHERE id=?', _id)
+        form = self.cur.execute('SELECT * FROM forms WHERE id=?', _id)
         return form.fetchall()
         
     def getFormByName(self, name):
-        form = c.execute('SELECT * FROM forms WHERE name=?', name)
+        form = self.cur.execute('SELECT * FROM forms WHERE name=?', name)
         return form.fetchall()
         
     def getFormByType(self, _type):
-        forms = c.execute('SELECT * FROM forms WHERE type=?', _type)
+        forms = self.cur.execute('SELECT * FROM forms WHERE type=?', _type)
         return forms.fetchall()
         
     def save(self):
-        c.commit()
+        self.cur.commit()
+
+
+def test():
+    """Tests the database handling by creating the database file
+    with the defined schema"""
+
+    db = Database()
+
+if __name__ == "__main__":
+    test()
+
