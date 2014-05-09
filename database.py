@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/env python
 # vim: set fileencoding=utf-8 shiftwidth=4 tabstop=4 expandtab smartindent :
 
 """
