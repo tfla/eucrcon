@@ -2,13 +2,29 @@
 # vim: set fileencoding=utf-8 shiftwidth=4 tabstop=4 expandtab smartindent :
 
 import os
+import re
 import sys
 import zipfile as zf
 import xml.dom.minidom
 
-from parsing_test_laban import getTextRecursive
 from xml.sax import parse, ContentHandler
             
+def getTextRecursive(element):
+    """
+    Return all text in an element (everything which is not within tags).
+    Duplicate, leading and trailing spaces are removed.
+    """
+
+    text = []
+    for node in element.childNodes:
+        if node.nodeType == node.TEXT_NODE:
+            text.append(node.data)
+        else:
+            text.append(getTextRecursive(node))
+
+    joined = " ".join(text)
+    return re.sub(" +", " ", joined).strip() # Remove duplicate, leading and trailing spaces
+
 def findName(odtFile, nameTag='Name:'):
     """
     Finds the name of the respondent by searching for the string
