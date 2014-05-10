@@ -15,13 +15,14 @@ __license__ = "MIT"
 
 import argparse
 import os
+import parser
 import sys
 import zipfile
 
 if sys.version_info >= (3,):
-    from io import StringIO
+    from io import BytesIO as FileLike
 else:
-    from cStringIO import StringIO
+    from cStringIO import StringIO as FileLike
 
 class ConsultationZipHandler:
     """
@@ -33,19 +34,25 @@ class ConsultationZipHandler:
         self.count = 0
         self.extensionDict = {}
         self.fileList = []
+        self.fileListByZip = {} # zip filename -> list of containing files
         self.languageDict = {}
-        self.zipFiles = {} # filename -> ZipFile object
+        self.zipFiles = {}      # filename -> ZipFile object
 
     def addZip(self, zipFilename):
-        """Read statistics in zip file
+        """
+        Read statistics in zip file
         """
 
         zipFile = zipfile.ZipFile(zipFilename)
-        self.zipFiles[zipFilename] = zipFile # Save in class dict
+        self.zipFiles[zipFilename] = zipFile # Save in instance dict
+        self.fileListByZip[zipFilename] = []
 
-        # Loop through all files in the zip file
-        # and count the number of files in different
-        # categories and with different extensions
+        """
+        Loop through all files in the zip file
+        and count the number of files in different
+        categories, with different extensions and
+        in different languages
+        """
         for filename in zipFile.namelist():
             category = os.path.dirname(filename)
             formName = os.path.basename(filename)
@@ -53,6 +60,7 @@ class ConsultationZipHandler:
                 # Directory entry
                 continue
             self.fileList.append(formName)
+            self.fileListByZip[zipFilename].append(filename)
             self.count += 1
 
             # Category
@@ -85,6 +93,22 @@ class ConsultationZipHandler:
                 self.languageDict[language]["count"] += 1
             else:
                 self.languageDict[language] = {"count": 1}
+
+    def analyze(self):
+        for zipFilename in self.zipFiles.keys():
+            zipFile = self.zipFiles[zipFilename] #ZipFile object
+            filenames = self.fileListByZip[zipFilename]
+            for filename in filenames:
+                if not filename.lower().endswith(".odt"):
+                    continue
+                odtFilename = filename
+                odtContent = zipFile.read(odtFilename)
+                odtFile = FileLike(odtContent) #FileLike provides seek()
+                if zipfile.is_zipfile(odtFile):
+                    parser.parseOdfFile(odtFile)
+                else:
+                    print("ERROR: {} is not a valid zip file!".format(odtFilename))
+                odtFile.close()
 
     def listFiles(self):
         return self.fileList
@@ -172,7 +196,7 @@ def main():
         print("")
         count += zip.getCount()
     elif args.command == "analyze":
-        pass
+        zip.analyze()
 
 if __name__ == "__main__":
     main()

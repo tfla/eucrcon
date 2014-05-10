@@ -155,13 +155,15 @@ def findAnswers(odtFile, questFile):
         ansList.append('NO COMMENT')
     return ansList
 
-if __name__ == '__main__':
+
+def parseOdfFile(filename):
+    """Parse an ODT file"""
+
     """
-    Change phrase to the search string and filename to the .odt file
-    you want to search. It will find the paragraphs where phrase matches
+    Change phrase to the search string you want to search for.
+    It will find the paragraphs where phrase matches
     and print the paragraph
     """
-    filename = 'input/users/a.-alcubilla_en.odt' #sys.argv[0] 
     phrase =  'Name:' #sys.argv[1]
     e = findAnswers(filename, 'quest_stub')
     print(len(e))
@@ -177,3 +179,10 @@ if __name__ == '__main__':
                                     # paragraph text.
         myodf.findIt(phrase)        # find the phrase ...
     """
+
+if __name__ == '__main__':
+    filename = 'input/users/a.-alcubilla_en.odt' #sys.argv[0]
+    if not os.path.isfile(filename):
+        print("ERROR: File {} not found. Make sure that input/users_en.zip is unzipped.".format(filename))
+        sys.exit(1)
+    parseOdfFile(filename)
