@@ -31,7 +31,7 @@ def findName(odtfile, nametag='Name:'):
                     return ans
     return "Counld not find the string {}".format(nametag)
 
-def findStyles(odtfile, styletag = 'style:text-underline-type'):
+def findStyles(odtfile, styletag = 'style:text-underline-style'):
     """
     This function will search through the file 'content.xml' to find
     the styles that underline the text in the file.
@@ -65,7 +65,7 @@ def findStyles(odtfile, styletag = 'style:text-underline-type'):
     
     return underlinelist
     
-def findAnswers(odtfile,questfile):
+def findAnswers(odtfile, questfile, byNumbering = False):
     """
     This function finds the answers in the odtfile by searching for each string
     in the questfile in succession through the text:p parts and returning the
@@ -139,13 +139,14 @@ if __name__ == '__main__':
     you want to search. It will find the paragraphs where phrase matches
     and print the paragraph
     """
-    filename = 'input/TMP/a.-alcubilla_en.odt' #sys.argv[0] 
-    phrase =  'Name:'#sys.argv[1]
-    e = findAnswers(filename,'quest_stub')
-    print( len(e))
-    print('')
-    for i in e:
-        print(i)
+#    phrase =  'Name:'#sys.argv[1]
+    ROOT = (os.path.dirname(__file__))
+    TMP = os.path.join(ROOT,'input/TMP')
+    files = os.listdir(TMP)
+    for i in files:
+        ppath = os.path.join(TMP,i)
+        e = findAnswers (ppath,'quest_stub')
+        print('{}: {}'.format(i,len(e)))
     """
     if zipfile.is_zipfile(filename):
         myodf = OdfReader(filename) # Create object.
