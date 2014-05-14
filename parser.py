@@ -16,7 +16,7 @@ def findAttributeRecursive(element, tagName):
     """
     boo = False
     if element.hasAttribute(tagName):
-            boo = True
+        boo = True
     for node in element.childNodes:
         if node.nodeType != node.TEXT_NODE and node.hasAttributes():
             if node.hasAttribute(tagName):
@@ -47,6 +47,26 @@ def getTextRecursive(element):
     joined = " ".join(text)
     return re.sub(" +", " ", joined).strip() # Remove duplicate, leading and trailing spaces
 
+def findUnderlinedRecursive(element, styles ,tag = 'text:style-name'):
+    if element.nodeName == 'text:p':
+        paras = [element]
+    else:
+        paras = element.getElementsByTagName('text:p')
+    text = []
+    for st in paras:
+        if st.hasAttribute(tag):
+            if st.getAttribute(tag) in styles: # It checks if the style is among the styles that underlines the text      
+                paragraphText = ''
+                for ch in st.childNodes:
+                    if ch.nodeType == ch.TEXT_NODE:
+                        paragraphText += ch.data
+                text.append(paragraphText)
+    if len(text) == 0:
+        return (False,' ')
+    else:
+        joined = " ".join(text)
+        return (True,re.sub(" +", " ", joined).strip()) # Remove duplicate, leading and trailing spaces
+                
 def findName(odtFile, nameTag='Name:'):
     """
     Finds the name of the respondent by searching for the string
@@ -127,8 +147,8 @@ def findAnswers(odtFile, tag = 'text:continue-numbering'):
     
     underlinedStyles = findStyles(odtFile)
     
-    questions=range(14,34) + range(35,78) + range(79,87) + [88, 89, 90, 92, 93, 94, 96, 97, 99]
-    openquest = [16,27,29,30,31,32,37,39,41]+range(43,50)+[51,52,53,57,58,59,60,62,63,65,66,68,69,70,71,75,76,77,81,84,85,86,88,90,93,97,99]
+    questions=list(range(14,34)) + list(range(35,78)) + list(range(79,87)) + [88, 89, 90, 92, 93, 94, 96, 97, 99]
+    openquest = [16,27,29,30,31,32,37,39,41]+list(range(43,50))+[51,52,53,57,58,59,60,62,63,65,66,68,69,70,71,75,76,77,81,84,85,86,88,90,93,97,99]
     
     zipodt = zf.ZipFile(odtFile)
     cont = zipodt.read('content.xml')
@@ -139,10 +159,25 @@ def findAnswers(odtFile, tag = 'text:continue-numbering'):
     if not numberOfCountAttribute == 100:
         print("Found {} number of text:continue-numbering which is not supported".format(numberOfCountAttribute))
     
+    ansList = []
     questionNr = 0
+    foundQuest = False
     for element in paras:
+#        print("Hello!")
         if findAttributeRecursive(element, tag):
             if questionNr in questions:
+                if foundQuest:
+                    ansList.append('NO COMMENT')
+                foundQuest = True
+            questionNr = questionNr + 1
+        if foundQuest:
+            ifFound, text = findUnderlinedRecursive(element, underlinedStyles)
+            if ifFound:
+                ansList.append(text)
+                foundQuest = False
+    if len(ansList)<80:
+        ansList.append('NO COMMENT')
+    return ansList
                 
     
 def findAnswers2(odtFile, questFile):
@@ -242,11 +277,13 @@ def parseOdfFile(filename):
     """
 
 if __name__ == '__main__':
-    filename = 'input/TMP/a.-alcubilla_en.odt'
+    filename = 'input/TMP/a.nelles_en.odt'
 #    filename = 'input/users/a.-alcubilla_en.odt' #sys.argv[0]
 #    if not os.path.isfile(filename):
 #        print("ERROR: File {} not found. Make sure that input/users_en.zip is unzipped.".format(filename))
 #        sys.exit(1)
 #    parseOdfFile(filename)
-    print(countTag(filename))
+    ans = findAnswers(filename)
+    print(ans)
+    print(len(ans))
     
