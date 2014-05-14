@@ -1,5 +1,4 @@
-from __future__ import ( division, absolute_import, print_function, unicode_literals )
-#!python
+#!/usr/bin/env python
 # vim: set fileencoding=utf-8 shiftwidth=4 tabstop=4 expandtab smartindent :
 
 """
@@ -15,6 +14,8 @@ Files will be stored in the "input" directory.
 # http://ec.europa.eu/internal_market/consultations/docs/2013/copyright/registered_en.zip
 # http://ec.europa.eu/internal_market/consultations/docs/2013/copyright/users_en.zip
 # http://ec.europa.eu/internal_market/consultations/docs/2013/copyright/other-stakeholders_en.zip
+
+from __future__ import ( division, absolute_import, print_function, unicode_literals )
 
 __author__ = "Henrik Laban Torstensson, Andreas Söderlund, Timmy Larsson"
 __license__ = "MIT"
