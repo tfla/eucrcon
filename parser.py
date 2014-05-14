@@ -8,7 +8,29 @@ import zipfile as zf
 import xml.dom.minidom
 
 from xml.sax import parse, ContentHandler
-            
+
+def findAttributeRecursive(element, tagName):
+    """
+    Searches an element recursively to find if a certain attribute is
+    present.
+    """
+    boo = False
+    if element.hasAttribute(tagName):
+            boo = True
+    for node in element.childNodes:
+        if node.nodeType != node.TEXT_NODE and node.hasAttributes():
+            if node.hasAttribute(tagName):
+                boo = True
+                print("Hello!")
+            else:
+                boo = findAttributeRecursive(node, tagName)
+        if boo: break
+    else:
+        if element.hasAttribute(tagName):
+            boo = True
+            print("Hello!")
+    return boo
+       
 def getTextRecursive(element):
     """
     Return all text in an element (everything which is not within tags).
@@ -83,8 +105,47 @@ def findStyles(odtFile, styleTag='style:text-underline-type'):
             underlineList.append(node.getAttribute('style:name'))
     
     return underlineList
+
+def countTag(odtFile, tag = 'text:continue-numbering'):
     
-def findAnswers(odtFile, questFile):
+    zipodt = zf.ZipFile(odtFile)
+    cont = zipodt.read('content.xml')
+    doc = xml.dom.minidom.parseString(cont)
+    
+#    paras = doc.getElementsByTagName('text:p')
+    paras = doc.getElementsByTagName('office:body')[0].childNodes[0].childNodes
+#    print(paras[0].childNodes)
+    
+    counter = 0    
+    for element in paras:
+        if findAttributeRecursive(element, tag):
+            counter = counter + 1
+    return counter
+    
+    
+def findAnswers(odtFile, tag = 'text:continue-numbering'):
+    
+    underlinedStyles = findStyles(odtFile)
+    
+    questions=range(14,34) + range(35,78) + range(79,87) + [88, 89, 90, 92, 93, 94, 96, 97, 99]
+    openquest = [16,27,29,30,31,32,37,39,41]+range(43,50)+[51,52,53,57,58,59,60,62,63,65,66,68,69,70,71,75,76,77,81,84,85,86,88,90,93,97,99]
+    
+    zipodt = zf.ZipFile(odtFile)
+    cont = zipodt.read('content.xml')
+    doc = xml.dom.minidom.parseString(cont)
+    
+    paras = doc.getElementsByTagName('office:body')[0].childNodes[0].childNodes
+    numberOfCountAttribute = countTag(odtFile, tag)
+    if not numberOfCountAttribute == 100:
+        print("Found {} number of text:continue-numbering which is not supported".format(numberOfCountAttribute))
+    
+    questionNr = 0
+    for element in paras:
+        if findAttributeRecursive(element, tag):
+            if questionNr in questions:
+                
+    
+def findAnswers2(odtFile, questFile):
     """
     This function finds the answers in the odtFile by searching for each string
     in the questFile in succession through the text:p parts and returning the
@@ -181,8 +242,11 @@ def parseOdfFile(filename):
     """
 
 if __name__ == '__main__':
-    filename = 'input/users/a.-alcubilla_en.odt' #sys.argv[0]
-    if not os.path.isfile(filename):
-        print("ERROR: File {} not found. Make sure that input/users_en.zip is unzipped.".format(filename))
-        sys.exit(1)
-    parseOdfFile(filename)
+    filename = 'input/TMP/a.-alcubilla_en.odt'
+#    filename = 'input/users/a.-alcubilla_en.odt' #sys.argv[0]
+#    if not os.path.isfile(filename):
+#        print("ERROR: File {} not found. Make sure that input/users_en.zip is unzipped.".format(filename))
+#        sys.exit(1)
+#    parseOdfFile(filename)
+    print(countTag(filename))
+    
