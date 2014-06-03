@@ -15,6 +15,7 @@ __license__ = "MIT"
 
 import argparse
 import os
+import random
 import parser
 import sys
 import zipfile
@@ -94,13 +95,20 @@ class ConsultationZipHandler:
             else:
                 self.languageDict[language] = {"count": 1}
 
-    def analyze(self):
-        for zipFilename in self.zipFiles.keys():
+    def analyze(self, randomize=False, showProgress=False):
+        zipFilenames = self.zipFiles.keys()
+        if randomize:
+            random.shuffle(zipFilenames)
+        count = 0
+        for zipFilename in zipFilenames:
             zipFile = self.zipFiles[zipFilename] #ZipFile object
             filenames = self.fileListByZip[zipFilename]
+            if randomize:
+                random.shuffle(filenames)
             for filename in filenames:
                 if not filename.lower().endswith(".odt"):
                     continue
+                print(filename)
                 odtFilename = filename
                 odtContent = zipFile.read(odtFilename)
                 odtFile = FileLike(odtContent) #FileLike provides seek()
@@ -109,6 +117,11 @@ class ConsultationZipHandler:
                 else:
                     print("ERROR: {} is not a valid zip file!".format(odtFilename))
                 odtFile.close()
+
+                count += 1
+                if showProgress:
+                    if count % showProgress == 0:
+                        print("{} files analyzed".format(count))
 
     def listFiles(self):
         return self.fileList
@@ -162,6 +175,17 @@ def main():
                         dest="files",
                         nargs="+",
                         help="Space separated list of zip files to handle")
+    parser.add_argument("-r",
+                        "--randomize",
+                        dest="randomize",
+                        action="store_true",
+                        help="Randomize the processing order of zip files and responses")
+    parser.add_argument("--progress",
+                        metavar="N",
+                        dest="progress",
+                        type=int,
+                        default=0,
+                        help="Show number of files processed (every N file)")
 
     args = parser.parse_args()
 
@@ -203,7 +227,7 @@ def main():
         print("")
         count += zipHandler.getCount()
     elif args.command == "analyze":
-        zipHandler.analyze()
+        zipHandler.analyze(randomize=args.randomize, showProgress=args.progress)
 
 if __name__ == "__main__":
     main()
