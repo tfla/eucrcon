@@ -95,7 +95,8 @@ class ConsultationZipHandler:
             else:
                 self.languageDict[language] = {"count": 1}
 
-    def analyze(self, randomize=False, showProgress=False):
+    def analyze(self, randomize=False, showProgress=False, printNames=False):
+        numOfFilesToAnalyze = self.getCount()
         zipFilenames = self.zipFiles.keys()
         if randomize:
             random.shuffle(zipFilenames)
@@ -108,7 +109,8 @@ class ConsultationZipHandler:
             for filename in filenames:
                 if not filename.lower().endswith(".odt"):
                     continue
-                print(filename)
+                if printNames:
+                    print("Analyzing {}...".format(filename))
                 odtFilename = filename
                 odtContent = zipFile.read(odtFilename)
                 odtFile = FileLike(odtContent) #FileLike provides seek()
@@ -121,7 +123,7 @@ class ConsultationZipHandler:
                 count += 1
                 if showProgress:
                     if count % showProgress == 0:
-                        print("{} files analyzed".format(count))
+                        print("{:.2%} analyzed ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
 
     def listFiles(self):
         return self.fileList
@@ -186,6 +188,10 @@ def main():
                         type=int,
                         default=0,
                         help="Show number of files processed (every N file)")
+    parser.add_argument("--names",
+                        dest="printNames",
+                        action="store_true",
+                        help="Print filenames of all processed files")
 
     args = parser.parse_args()
 
@@ -227,7 +233,9 @@ def main():
         print("")
         count += zipHandler.getCount()
     elif args.command == "analyze":
-        zipHandler.analyze(randomize=args.randomize, showProgress=args.progress)
+        zipHandler.analyze(randomize=args.randomize,
+                           showProgress=args.progress,
+                           printNames=args.printNames)
 
 if __name__ == "__main__":
     main()
