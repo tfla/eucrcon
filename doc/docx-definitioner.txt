@@ -24,3 +24,7 @@ Numrerade punkter definieras med
 Ett exempel med tillhörande definitioner av nivå och id är:
 
 <w:numPr><w:ilvl w:val="0"/><w:numId w:val="36"/></w:numPr> 
+
+
+.docx refereras i http://www.iso.org/iso/home/store/catalogue_tc/catalogue_detail.htm?csnumber=61750
+för ytterligare info
