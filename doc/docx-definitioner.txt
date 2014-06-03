@@ -25,6 +25,11 @@ Ett exempel med tillhörande definitioner av nivå och id är:
 
 <w:numPr><w:ilvl w:val="0"/><w:numId w:val="36"/></w:numPr> 
 
+Allmänt tips för att analysera xml-filer:
+använd 
+xmllint --format fil.xml > output.xml 
+för att få en indenterad, läsbar xml-fil istället för en oanvändbar oneliner. 
+Ovärderligt för att analysera filen manuellt.
 
 .docx refereras i http://www.iso.org/iso/home/store/catalogue_tc/catalogue_detail.htm?csnumber=61750
 för ytterligare info
