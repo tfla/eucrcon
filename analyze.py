@@ -172,38 +172,38 @@ def main():
 
     print("")
     count = 0
-    zip = ConsultationZipHandler()
+    zipHandler = ConsultationZipHandler()
     for zipFile in args.files:
         print("Handling %s..." % (zipFile))
-        zip.addZip(zipFile)
+        zipHandler.addZip(zipFile)
 
     print("")
     if args.command == "list-forms":
         print("List of consultation forms:")
-        for file in zip.listFiles():
+        for file in zipHandler.listFiles():
             try:
                 print("* %s" % (file))
             except UnicodeEncodeError:
                 print("ERROR: Encoding error")
     elif args.command == "stats":
         print("Categories:")
-        categories = zip.getCategories()
+        categories = zipHandler.getCategories()
         for category in categories:
-            print("  %-55s: %5d" % (category, zip.getCountInCategory(category)))
+            print("  %-55s: %5d" % (category, zipHandler.getCountInCategory(category)))
         print("")
         print("File extensions:")
-        for (ext, count) in zip.getExtensionCount():
+        for (ext, count) in zipHandler.getExtensionCount():
             print("  %-5s: %5d" % (ext, count))
         print("")
         print("Languages:")
-        for (lang, count) in zip.getLanguageCount():
+        for (lang, count) in zipHandler.getLanguageCount():
             print("  %-2s: %5d" % (lang, count))
         print("")
-        print("NUMBER OF FILES: %d" % (zip.getCount()))
+        print("NUMBER OF FILES: %d" % (zipHandler.getCount()))
         print("")
-        count += zip.getCount()
+        count += zipHandler.getCount()
     elif args.command == "analyze":
-        zip.analyze()
+        zipHandler.analyze()
 
 if __name__ == "__main__":
     main()

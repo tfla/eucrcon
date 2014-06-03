@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 # vim: set fileencoding=utf-8 shiftwidth=4 tabstop=4 expandtab smartindent :
 
-import os
+#import os
 import re
 import sys
 import zipfile as zf
 from xml.dom import minidom
-
-from xml.sax import parse, ContentHandler
 
 def findAttributeRecursive(element, tagName):
     """
@@ -190,7 +188,7 @@ def findAnswers2(odtFile, questFile):
     "NO RESPONSE" is returned.
     """
     underlinedStyles = findStyles(odtFile)
-    questList = []
+#    questList = []
     with open(questFile, 'r') as tmpfile:
         tmpstring = tmpfile.read()
         questList = tmpstring.split('\n')[:-1] #The last element is empty and should be ignored.
@@ -262,8 +260,8 @@ def parseOdfFile(filename):
     It will find the paragraphs where phrase matches
     and print the paragraph
     """
-    phrase =  'Name:' #sys.argv[1]
-    nam,typ,ans = parser(filename)
+#    phrase =  'Name:' #sys.argv[1]
+    _, _, ans = parser(filename)
     print(len(ans))
     print('')
     for i in ans:
