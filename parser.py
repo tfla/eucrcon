@@ -133,7 +133,7 @@ def countTag(element, tag = 'text:continue-numbering'):
     return counter
     
     
-def findAnswers(element, questions, openquest, styleTag='style:text-underline-type', tag = 'text:continue-numbering'):
+def findAnswers(element, questions, openquest, styleTags=['style:text-underline-type'], tag = 'text:continue-numbering'):
     """
     This is the new updated findAnswers method, the old one is saved as findAnswers2.
     this function will go through all the childNodes of the node 'office:body'
@@ -147,7 +147,12 @@ def findAnswers(element, questions, openquest, styleTag='style:text-underline-ty
     As it is now, free text is not implemented yet but is just added as ' ' for
     later compatibility.
     """
-    underlinedStyles = findStyles(element, styleTag)
+    
+    underlinedStyles = findStyles(element, styleTags[0])
+    for styleString in styleTags[1:]:
+        tmpStyles = findStyles(element, styleString)
+        if len(tmpStyles)>len(underlinedStyles):
+            underlinedStyles = tmpStyles[:]
     
     paras = element.getElementsByTagName('office:body')[0].childNodes[0].childNodes # Open all the childNodes of 'office:body'
     numberOfCountAttribute = countTag(element, tag)
@@ -274,14 +279,16 @@ def parseOdfFile(filename):
     """
     return False
 
-def parser(filename, questions=False, openquest=False, nameTag='Name:', styleTag='style:text-underline-type', numberingTag='text:continue-numbering'):
+def parser(filename, questions=False, openquest=False, nameTag='Name:', styleTags=['style:text-underline-type','style:text-underline-style'], numberingTag='text:continue-numbering'):
     """
     This is the main function that will open an .odt file and find the name of 
     the respondent and the answers to the 80 questions.
     nameTag is used to find the name of the respondent and will return the text
     following the string in nameTag.
-    styleTag is used to find the answers. the text following the questions that
-    matches the styles containing styleTag will be regarded as answers.
+    styleTags is used to find the answers. the text following the questions that
+    matches the styles containing styleTags will be regarded as answers. The
+    function will go through all the strings in the list styleTags and use the
+    string that find the most styles as the one to find the relevant styles.
     numberingTag will be used to find the questions. Each time numberingTag is 
     found it has the possibility of being a question as defined by the questions
     list.
@@ -309,7 +316,7 @@ def parser(filename, questions=False, openquest=False, nameTag='Name:', styleTag
     respondNam = findName(doc, nameTag)
     
     respondTyp = False # The type of the respondent (user/copyright holder/etc.). Not implemented yet!
-    respondAns = findAnswers(doc, questions, openquest, styleTag, numberingTag)
+    respondAns = findAnswers(doc, questions, openquest, styleTags, numberingTag)
     
     return respondNam, respondTyp, respondAns
     
