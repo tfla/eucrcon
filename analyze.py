@@ -18,6 +18,7 @@ import os
 import random
 import parser
 import sys
+import time
 import zipfile
 
 if sys.version_info >= (3,):
@@ -101,6 +102,7 @@ class ConsultationZipHandler:
         if randomize:
             random.shuffle(zipFilenames)
         count = 0
+        startTime = time.time()
         try:
             for zipFilename in zipFilenames:
                 zipFile = self.zipFiles[zipFilename] #ZipFile object
@@ -127,7 +129,10 @@ class ConsultationZipHandler:
                             print("{:.2%} analyzed ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
         except KeyboardInterrupt:
             print("  Aborting")
-            print("{:.2%} analyzed ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
+        print("{:.2%} analyzed ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
+        duration = time.time() - startTime
+        if count > 0:
+            print("{} files analyzed in {:.1f} s (avg {:.3f} s)".format(count, duration, duration/count))
 
     def listFiles(self):
         return self.fileList
