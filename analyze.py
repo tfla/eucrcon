@@ -138,7 +138,14 @@ class ConsultationZipHandler:
         resList = []
         for (lang, langDict) in self.languageDict.items():
             resList.append((lang, langDict["count"]))
-        return sorted(resList, reverse=True, key=lambda tuple: tuple[1])
+        return sorted(resList, reverse=True, key=lambda tup: tup[1])
+    
+    def getExtensionCount(self):
+        resList = []
+        for (ext, extDict) in self.extensionDict.items():
+            resList.append((ext, extDict["count"]))
+        return sorted(resList, reverse=True, key=lambda tup: tup[1])
+        
 
 def main():
     """Main function for running the analyzer.
@@ -185,8 +192,8 @@ def main():
             print("  %-55s: %5d" % (category, zip.getCountInCategory(category)))
         print("")
         print("File extensions:")
-        for extension in zip.getExtensions():
-            print("  %-4s: %5d" % (extension, zip.getCountInExtension(extension)))
+        for (ext, count) in zip.getExtensionCount():
+            print("  %-5s: %5d" % (ext, count))
         print("")
         print("Languages:")
         for (lang, count) in zip.getLanguageCount():
