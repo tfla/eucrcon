@@ -31,7 +31,7 @@ class Database():
             self.cur.execute('''CREATE TABLE answers (id INTEGER PRIMARY KEY AUTOINCREMENT, num INTEGER, question INTEGER, choice TEXT, freeText TEXT)''')
         if not ('forms',) in ans:
             print("Creating table 'forms'...")
-            self.cur.execute('''CREATE TABLE forms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT)''')
+            self.cur.execute('''CREATE TABLE forms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, lang TEXT)''')
         if not ('questions',) in ans:
             print("Creating table 'questions'...")
             self.cur.execute('''CREATE TABLE questions (id INTEGER PRIMARY KEY AUTOINCREMENT, question TEXT, type TEXT)''')
@@ -54,7 +54,7 @@ class Database():
         
     def putAnswer(self, num, question, choice, freeText):
         for tmp in [(num, question, choice, freeText)]:
-            self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?)', tmp)
+            self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?, ?, ?)', tmp)
 
     def listAnswers(self):
         answers = self.cur.execute('SELECT * FROM answers ORDER BY id')
@@ -76,9 +76,9 @@ class Database():
         answer = self.cur.execute('SELECT * FROM answers WHERE choice=?', choice)
         return answer.fetchall()
         
-    def putForm(self, name, _type):
-        for tmp in [(name, _type)]:
-            self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?)', tmp)
+    def putForm(self, name, _type, lang):
+        for tmp in [(name, _type, lang)]:
+            self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?, ?)', tmp)
         
     def listForms(self):
         forms = self.cur.execute('SELECT * FROM forms ORDER BY id')
@@ -94,6 +94,10 @@ class Database():
         
     def getFormByType(self, _type):
         forms = self.cur.execute('SELECT * FROM forms WHERE type=?', _type)
+        return forms.fetchall()
+
+    def getFormByLang(self, lang):
+        forms = self.cut.execute('SELECT * FROM forms WHERE lang=?', lang)
         return forms.fetchall()
         
     def save(self):
