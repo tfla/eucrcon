@@ -33,7 +33,7 @@ else:
 def download_file(url, desc=None):
     u = urllib2.urlopen(url)
 
-    scheme, netloc, path, query, fragment = urlparse.urlsplit(url)
+    _, _, path, _, _ = urlparse.urlsplit(url) # scheme, netloc, path, query, fragment
     filename = os.path.basename(path)
     if not filename:
         filename = 'downloaded.file'

@@ -15,8 +15,10 @@ __license__ = "MIT"
 
 import argparse
 import os
+import random
 import parser
 import sys
+import time
 import zipfile
 
 if sys.version_info >= (3,):
@@ -94,21 +96,43 @@ class ConsultationZipHandler:
             else:
                 self.languageDict[language] = {"count": 1}
 
-    def analyze(self):
-        for zipFilename in self.zipFiles.keys():
-            zipFile = self.zipFiles[zipFilename] #ZipFile object
-            filenames = self.fileListByZip[zipFilename]
-            for filename in filenames:
-                if not filename.lower().endswith(".odt"):
-                    continue
-                odtFilename = filename
-                odtContent = zipFile.read(odtFilename)
-                odtFile = FileLike(odtContent) #FileLike provides seek()
-                if zipfile.is_zipfile(odtFile):
-                    parser.parseOdfFile(odtFile)
-                else:
-                    print("ERROR: {} is not a valid zip file!".format(odtFilename))
-                odtFile.close()
+    def analyze(self, randomize=False, showProgress=False, printNames=False):
+        numOfFilesToAnalyze = self.getCount()
+        zipFilenames = self.zipFiles.keys()
+        if randomize:
+            random.shuffle(zipFilenames)
+        count = 0
+        startTime = time.time()
+        try:
+            for zipFilename in zipFilenames:
+                zipFile = self.zipFiles[zipFilename] #ZipFile object
+                filenames = self.fileListByZip[zipFilename]
+                if randomize:
+                    random.shuffle(filenames)
+                for filename in filenames:
+                    if not filename.lower().endswith(".odt"):
+                        continue
+                    if printNames:
+                        print("Analyzing {}...".format(filename))
+                    odtFilename = filename
+                    odtContent = zipFile.read(odtFilename)
+                    odtFile = FileLike(odtContent) #FileLike provides seek()
+                    if zipfile.is_zipfile(odtFile):
+                        parser.parseOdfFile(odtFile)
+                    else:
+                        print("ERROR: {} is not a valid zip file!".format(odtFilename))
+                    odtFile.close()
+
+                    count += 1
+                    if showProgress:
+                        if count % showProgress == 0:
+                            print("{:.2%} analyzed ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
+        except KeyboardInterrupt:
+            print("  Aborting")
+        print("{:.2%} analyzed ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
+        duration = time.time() - startTime
+        if count > 0:
+            print("{} files analyzed in {:.1f} s (avg {:.3f} s)".format(count, duration, duration/count))
 
     def listFiles(self):
         return self.fileList
@@ -162,6 +186,21 @@ def main():
                         dest="files",
                         nargs="+",
                         help="Space separated list of zip files to handle")
+    parser.add_argument("-r",
+                        "--randomize",
+                        dest="randomize",
+                        action="store_true",
+                        help="Randomize the processing order of zip files and responses")
+    parser.add_argument("--progress",
+                        metavar="N",
+                        dest="progress",
+                        type=int,
+                        default=0,
+                        help="Show number of files processed (every N file)")
+    parser.add_argument("--names",
+                        dest="printNames",
+                        action="store_true",
+                        help="Print filenames of all processed files")
 
     args = parser.parse_args()
 
@@ -172,38 +211,40 @@ def main():
 
     print("")
     count = 0
-    zip = ConsultationZipHandler()
+    zipHandler = ConsultationZipHandler()
     for zipFile in args.files:
         print("Handling %s..." % (zipFile))
-        zip.addZip(zipFile)
+        zipHandler.addZip(zipFile)
 
     print("")
     if args.command == "list-forms":
         print("List of consultation forms:")
-        for file in zip.listFiles():
+        for file in zipHandler.listFiles():
             try:
                 print("* %s" % (file))
             except UnicodeEncodeError:
                 print("ERROR: Encoding error")
     elif args.command == "stats":
         print("Categories:")
-        categories = zip.getCategories()
+        categories = zipHandler.getCategories()
         for category in categories:
-            print("  %-55s: %5d" % (category, zip.getCountInCategory(category)))
+            print("  %-55s: %5d" % (category, zipHandler.getCountInCategory(category)))
         print("")
         print("File extensions:")
-        for (ext, count) in zip.getExtensionCount():
+        for (ext, count) in zipHandler.getExtensionCount():
             print("  %-5s: %5d" % (ext, count))
         print("")
         print("Languages:")
-        for (lang, count) in zip.getLanguageCount():
+        for (lang, count) in zipHandler.getLanguageCount():
             print("  %-2s: %5d" % (lang, count))
         print("")
-        print("NUMBER OF FILES: %d" % (zip.getCount()))
+        print("NUMBER OF FILES: %d" % (zipHandler.getCount()))
         print("")
-        count += zip.getCount()
+        count += zipHandler.getCount()
     elif args.command == "analyze":
-        zip.analyze()
+        zipHandler.analyze(randomize=args.randomize,
+                           showProgress=args.progress,
+                           printNames=args.printNames)
 
 if __name__ == "__main__":
     main()
