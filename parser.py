@@ -258,10 +258,10 @@ def parseOdfFile(filename):
     and print the paragraph
     """
     phrase =  'Name:' #sys.argv[1]
-    e = findAnswers(filename, 'quest_stub')
-    print(len(e))
+    nam,typ,ans = parser(filename)
+    print(len(ans))
     print('')
-    for i in e:
+    for i in ans:
         print(i)
     """
     if zipfile.is_zipfile(filename):
