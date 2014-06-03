@@ -1,0 +1,26 @@
+I .docx (som är en omdöpt .zip-fil) finns document.xml, som innehåller all relevant info för oss (som jag kan hitta).
+
+Alla understrykningar börjar med taggen.
+<w:u
+
+Taggen avslutas sedan antingen direkt, eller med extra värden.
+
+Ett exempel på en singel (enkelradig) understrykning kan se ut som följer:
+
+<w:u w:val="single"/> 
+
+Formattering (som t ex understrykning) är persistent inom en huvudnod. Detta innebär att understrykningen kan definieras i en systernod till textnoden.
+
+Textnoder defnieras f ö med 
+<w:t
+
+med efterföljande (icke obligatoriska) definitionsvärden.
+De flesta är bara en
+<w:t>Nån text</w:t>
+
+Numrerade punkter definieras med 
+<w:numPr> 
+
+Ett exempel med tillhörande definitioner av nivå och id är:
+
+<w:numPr><w:ilvl w:val="0"/><w:numId w:val="36"/></w:numPr> 
