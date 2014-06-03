@@ -101,29 +101,33 @@ class ConsultationZipHandler:
         if randomize:
             random.shuffle(zipFilenames)
         count = 0
-        for zipFilename in zipFilenames:
-            zipFile = self.zipFiles[zipFilename] #ZipFile object
-            filenames = self.fileListByZip[zipFilename]
-            if randomize:
-                random.shuffle(filenames)
-            for filename in filenames:
-                if not filename.lower().endswith(".odt"):
-                    continue
-                if printNames:
-                    print("Analyzing {}...".format(filename))
-                odtFilename = filename
-                odtContent = zipFile.read(odtFilename)
-                odtFile = FileLike(odtContent) #FileLike provides seek()
-                if zipfile.is_zipfile(odtFile):
-                    parser.parseOdfFile(odtFile)
-                else:
-                    print("ERROR: {} is not a valid zip file!".format(odtFilename))
-                odtFile.close()
+        try:
+            for zipFilename in zipFilenames:
+                zipFile = self.zipFiles[zipFilename] #ZipFile object
+                filenames = self.fileListByZip[zipFilename]
+                if randomize:
+                    random.shuffle(filenames)
+                for filename in filenames:
+                    if not filename.lower().endswith(".odt"):
+                        continue
+                    if printNames:
+                        print("Analyzing {}...".format(filename))
+                    odtFilename = filename
+                    odtContent = zipFile.read(odtFilename)
+                    odtFile = FileLike(odtContent) #FileLike provides seek()
+                    if zipfile.is_zipfile(odtFile):
+                        parser.parseOdfFile(odtFile)
+                    else:
+                        print("ERROR: {} is not a valid zip file!".format(odtFilename))
+                    odtFile.close()
 
-                count += 1
-                if showProgress:
-                    if count % showProgress == 0:
-                        print("{:.2%} analyzed ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
+                    count += 1
+                    if showProgress:
+                        if count % showProgress == 0:
+                            print("{:.2%} analyzed ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
+        except KeyboardInterrupt:
+            print("  Aborting")
+            print("{:.2%} analyzed ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
 
     def listFiles(self):
         return self.fileList
