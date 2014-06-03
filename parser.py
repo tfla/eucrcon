@@ -260,8 +260,11 @@ def parseOdfFile(filename):
     It will find the paragraphs where phrase matches
     and print the paragraph
     """
+    phrase =  'Name:' #sys.argv[1]
+    nam,typ,ans = parser(filename)
+    if nam == "DIDNT": # Returns True if no answers were found
+        return True
 #    phrase =  'Name:' #sys.argv[1]
-    _, _, ans = parser(filename)
     print(len(ans))
     print('')
     for i in ans:
@@ -316,6 +319,11 @@ def parser(filename, questions=False, openquest=False, nameTag='Name:', styleTag
     respondTyp = False # The type of the respondent (user/copyright holder/etc.). Not implemented yet!
     respondAns = findAnswers(doc, questions, openquest, styleTags, numberingTag)
     
+    # Checking if any answers were found
+    tmpBool = False
+    for element in respondAns:
+        if element[0] not in ['NO COMMENT', 'OPEN QUESTION']: tmpBool = True
+    if not tmpBool: return "DIDNT", "FIND", "ANSWERS"
     return respondNam, respondTyp, respondAns
     
 if __name__ == '__main__':
