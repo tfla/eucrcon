@@ -5,7 +5,7 @@ import os
 import re
 import sys
 import zipfile as zf
-import xml.dom.minidom
+from xml.dom import minidom
 
 from xml.sax import parse, ContentHandler
 
@@ -18,7 +18,7 @@ def findAttributeRecursive(element, tagName):
     if element.hasAttribute(tagName):
         boo = True
     for node in element.childNodes:
-        if node.nodeType != node.TEXT_NODE and node.hasAttributes():
+        if isinstance(node, minidom.Element) and node.hasAttributes():
             if node.hasAttribute(tagName):
                 boo = True
             else:
@@ -198,7 +198,7 @@ def findAnswers2(odtFile, questFile):
 #    print(len(questList), "\n")
     zipodt = zf.ZipFile(odtFile)
     cont = zipodt.read('content.xml')
-    doc = xml.dom.minidom.parseString(cont)
+    doc = minidom.parseString(cont)
     
     paras = doc.getElementsByTagName('text:p')
     ansList = []
@@ -311,7 +311,7 @@ def parser(filename, questions=False, openquest=False, nameTag='Name:', styleTag
     
     zipodt = zf.ZipFile(filename)
     cont = zipodt.read('content.xml')
-    doc = xml.dom.minidom.parseString(cont)
+    doc = minidom.parseString(cont)
     
     respondNam = findName(doc, nameTag)
     
