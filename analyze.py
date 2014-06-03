@@ -14,10 +14,13 @@ __author__ = "Henrik Laban Torstensson, Andreas Söderlund, Timmy Larsson"
 __license__ = "MIT"
 
 import argparse
+import multiprocessing
 import os
-import random
 import parser
+import queue
+import random
 import sys
+import threading
 import time
 import zipfile
 
@@ -25,6 +28,24 @@ if sys.version_info >= (3,):
     from io import BytesIO as FileLike
 else:
     from cStringIO import StringIO as FileLike
+
+exitThreads = False
+
+def threadWorker(q):
+    global exitThreads
+    while not exitThreads:
+        try:
+            (odtFilename, odtContent) = q.get(timeout=1) # Set timeout so that we can abort with Ctrl-C before everything is processed
+            odtFile = FileLike(odtContent) #FileLike provides seek()
+            if zipfile.is_zipfile(odtFile):
+                parser.parseOdfFile(odtFile)
+            else:
+                print("ERROR: {} is not a valid zip file!".format(odtFilename))
+            odtFile.close()
+            q.task_done()
+        except queue.Empty:
+            pass
+
 
 class ConsultationZipHandler:
     """
@@ -96,12 +117,21 @@ class ConsultationZipHandler:
             else:
                 self.languageDict[language] = {"count": 1}
 
-    def analyze(self, randomize=False, showProgress=False, printNames=False):
-        numOfFilesToAnalyze = self.getCount()
+    def analyze(self, randomize=False, showProgress=False, printNames=False, numThreads=1, numberOfFiles=0, queueSize=100):
+        global exitThreads
+        numOfFilesToAnalyze = min(self.getCount(), numberOfFiles)
         zipFilenames = self.zipFiles.keys()
         if randomize:
             random.shuffle(zipFilenames)
         count = 0
+        print("Queue size:", queueSize)
+        print("Analyzing using {} thread(s)...".format(numThreads))
+        q = queue.Queue(queueSize)
+        threads = []
+        for i in range(numThreads):
+            thread = threading.Thread(name="{}".format(i + 1), target=threadWorker, args=[q])
+            thread.start()
+            threads.append(thread)
         startTime = time.time()
         try:
             for zipFilename in zipFilenames:
@@ -113,22 +143,27 @@ class ConsultationZipHandler:
                     if not filename.lower().endswith(".odt"):
                         continue
                     if printNames:
-                        print("Analyzing {}...".format(filename))
+                        print("Enqueuing {}...".format(filename))
                     odtFilename = filename
                     odtContent = zipFile.read(odtFilename)
-                    odtFile = FileLike(odtContent) #FileLike provides seek()
-                    if zipfile.is_zipfile(odtFile):
-                        parser.parseOdfFile(odtFile)
-                    else:
-                        print("ERROR: {} is not a valid zip file!".format(odtFilename))
-                    odtFile.close()
+
+                    q.put((odtFilename, odtContent))
 
                     count += 1
                     if showProgress:
                         if count % showProgress == 0:
-                            print("{:.2%} analyzed ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
+                            print("{:.2%} enqueued ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
+                    if numberOfFiles:
+                        if count >= numberOfFiles:
+                            print("Aborting after enqueuing {} files".format(numberOfFiles))
+                            break
+            print("Waiting for files in queue to be analyzed...")
+            q.join()
         except KeyboardInterrupt:
             print("  Aborting")
+        exitThreads = True
+        for thread in threads:
+            thread.join()
         print("{:.2%} analyzed ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
         duration = time.time() - startTime
         if count > 0:
@@ -201,6 +236,24 @@ def main():
                         dest="printNames",
                         action="store_true",
                         help="Print filenames of all processed files")
+    parser.add_argument("-j",
+                        dest="threads",
+                        default=multiprocessing.cpu_count() + 1,
+                        type=int,
+                        help="Number of threads to use. Defaults to number of CPUs + 1.")
+    parser.add_argument("-n",
+                        "--num",
+                        dest="numberOfFiles",
+                        type=int,
+                        metavar="NUM",
+                        help="Abort after NUM files analyzed")
+    parser.add_argument("-q",
+                        "--queue-size",
+                        dest="queueSize",
+                        type=int,
+                        default=100,
+                        metavar="SIZE",
+                        help="Size of the queue of files to analyze")
 
     args = parser.parse_args()
 
@@ -213,7 +266,7 @@ def main():
     count = 0
     zipHandler = ConsultationZipHandler()
     for zipFile in args.files:
-        print("Handling %s..." % (zipFile))
+        print("Adding %s to handling list..." % (zipFile))
         zipHandler.addZip(zipFile)
 
     print("")
@@ -242,9 +295,12 @@ def main():
         print("")
         count += zipHandler.getCount()
     elif args.command == "analyze":
-        zipHandler.analyze(randomize=args.randomize,
+        zipHandler.analyze(numThreads=args.threads,
+                           randomize=args.randomize,
                            showProgress=args.progress,
-                           printNames=args.printNames)
+                           printNames=args.printNames,
+                           numberOfFiles=args.numberOfFiles,
+                           queueSize=args.queueSize)
 
 if __name__ == "__main__":
     main()
