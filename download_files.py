@@ -68,7 +68,7 @@ def download_file(url, desc=None):
 
     return filename
 
-urls = ["http://ec.europa.eu/internal_market/consultations/docs/2013/copyright/registered_en.zip", "http://ec.europa.eu/internal_market/consultations/docs/2013/copyright/users_en.zip", "http://ec.europa.eu/internal_market/consultations/docs/2013/copyright/other-stakeholders_en.zip"]
+urls = ["http://ec.europa.eu/internal_market/consultations/docs/2013/copyright/registered_en.zip", "http://ec.europa.eu/internal_market/consultations/docs/2013/copyright/users_en.zip", "http://ec.europa.eu/internal_market/consultations/docs/2013/copyright/other-stakeholders_en.zip", "http://ec.europa.eu/internal_market/consultations/docs/2013/copyright/anonymous-registered_en.zip", "http://ec.europa.eu/internal_market/consultations/docs/2013/copyright/anonymous-not-registered_en.zip"]
 
 if not os.path.isdir("input"):
     os.mkdir("input")
