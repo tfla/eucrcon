@@ -54,7 +54,7 @@ class Database():
         
     def putAnswer(self, num, question, choice, freeText):
         for tmp in [(num, question, choice, freeText)]:
-            self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?)', tmp)
+            self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?, ?, ?)', tmp)
 
     def listAnswers(self):
         answers = self.cur.execute('SELECT * FROM answers ORDER BY id')
