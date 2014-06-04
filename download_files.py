@@ -21,7 +21,7 @@ __author__ = "Henrik Laban Torstensson, Andreas Söderlund, Timmy Larsson"
 __license__ = "MIT"
 
 
-import sys, os, tempfile, logging, shutil
+import sys, os, shutil
 
 if sys.version_info >= (3,):
     import urllib.request as urllib2
