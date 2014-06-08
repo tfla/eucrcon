@@ -17,33 +17,31 @@ import argparse
 import multiprocessing
 import os
 import parser
-import queue
 import random
+import signal
 import sys
-import threading
 import time
 import zipfile
+
+from queue import Empty
 
 if sys.version_info >= (3,):
     from io import BytesIO as FileLike
 else:
     from cStringIO import StringIO as FileLike
 
-exitThreads = False
 
-def threadWorker(q):
-    global exitThreads
-    while not exitThreads:
+def processWorker(iq):
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    for odtFilename, odtContent in iter(iq.get, "STOP"):
         try:
-            (odtFilename, odtContent) = q.get(timeout=1) # Set timeout so that we can abort with Ctrl-C before everything is processed
             odtFile = FileLike(odtContent) #FileLike provides seek()
             if zipfile.is_zipfile(odtFile):
                 parser.parseOdfFile(odtFile)
             else:
                 print("ERROR: {} is not a valid zip file!".format(odtFilename))
             odtFile.close()
-            q.task_done()
-        except queue.Empty:
+        except Empty:
             pass
 
 
@@ -117,29 +115,36 @@ class ConsultationZipHandler:
             else:
                 self.languageDict[language] = {"count": 1}
 
-    def analyze(self, randomize=False, showProgress=False, printNames=False, numThreads=1, numberOfFiles=0, queueSize=100):
-        global exitThreads
+    def analyze(self, randomize=False, showProgress=False, printNames=False, numProcesses=1, numberOfFiles=0, queueSize=100):
         numOfFilesToAnalyze = min(self.getCount(), numberOfFiles)
         zipFilenames = self.zipFiles.keys()
         if randomize:
             random.shuffle(zipFilenames)
         count = 0
         print("Queue size:", queueSize)
-        print("Analyzing using {} thread(s)...".format(numThreads))
-        q = queue.Queue(queueSize)
-        threads = []
-        for i in range(numThreads):
-            thread = threading.Thread(name="{}".format(i + 1), target=threadWorker, args=[q])
-            thread.start()
-            threads.append(thread)
+        print("Analyzing using {} process(s)...".format(numProcesses))
+        q = multiprocessing.Queue(queueSize)
+        processes = []
+        for i in range(numProcesses):
+            process = multiprocessing.Process(name="{}".format(i + 1), target=processWorker, args=[q])
+            process.start()
+            processes.append(process)
         startTime = time.time()
+        abort = False
         try:
             for zipFilename in zipFilenames:
+                if abort:
+                    break
                 zipFile = self.zipFiles[zipFilename] #ZipFile object
                 filenames = self.fileListByZip[zipFilename]
                 if randomize:
                     random.shuffle(filenames)
                 for filename in filenames:
+                    if numberOfFiles:
+                        if count >= numberOfFiles:
+                            print("Aborting after enqueuing {} files".format(numberOfFiles))
+                            abort = True
+                            break
                     if not filename.lower().endswith(".odt"):
                         continue
                     if printNames:
@@ -153,17 +158,13 @@ class ConsultationZipHandler:
                     if showProgress:
                         if count % showProgress == 0:
                             print("{:.2%} enqueued ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
-                    if numberOfFiles:
-                        if count >= numberOfFiles:
-                            print("Aborting after enqueuing {} files".format(numberOfFiles))
-                            break
-            print("Waiting for files in queue to be analyzed...")
-            q.join()
         except KeyboardInterrupt:
             print("  Aborting")
-        exitThreads = True
-        for thread in threads:
-            thread.join()
+        print("Waiting for files in queue to be analyzed...")
+        for i in range(numProcesses):
+            q.put("STOP")
+        for process in processes:
+            process.join()
         print("{:.2%} analyzed ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
         duration = time.time() - startTime
         if count > 0:
@@ -232,15 +233,16 @@ def parse_args(availableCommands):
                         action="store_true",
                         help="Print filenames of all processed files")
     parser.add_argument("-j",
-                        dest="threads",
-                        default=multiprocessing.cpu_count() + 1,
+                        dest="processes",
+                        default=multiprocessing.cpu_count(),
                         type=int,
-                        help="Number of threads to use. Defaults to number of CPUs + 1.")
+                        help="Number of processes to use. Defaults to number of CPUs.")
     parser.add_argument("-n",
                         "--num",
                         dest="numberOfFiles",
                         type=int,
                         metavar="NUM",
+                        default=0,
                         help="Abort after NUM files analyzed")
     parser.add_argument("-q",
                         "--queue-size",
@@ -299,7 +301,7 @@ def main():
         print("")
         count += zipHandler.getCount()
     elif args.command == "analyze":
-        zipHandler.analyze(numThreads=args.threads,
+        zipHandler.analyze(numProcesses=args.processes,
                            randomize=args.randomize,
                            showProgress=args.progress,
                            printNames=args.printNames,
@@ -307,4 +309,5 @@ def main():
                            queueSize=args.queueSize)
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support() #Only for Windows executables (py2exe etc.)
     main()
