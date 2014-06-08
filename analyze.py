@@ -204,14 +204,9 @@ class ConsultationZipHandler:
         for (ext, extDict) in self.extensionDict.items():
             resList.append((ext, extDict["count"]))
         return sorted(resList, reverse=True, key=lambda tup: tup[1])
-        
 
-def main():
-    """Main function for running the analyzer.
-    Options will be parsed from the command line."""
 
-    availableCommands = ["analyze", "list-forms", "stats"]
-
+def parse_args(availableCommands):
     parser = argparse.ArgumentParser(description=__doc__)
     commandsHelp = "Available commands: %s" % (", ".join(availableCommands))
     parser.add_argument(metavar="CMD",
@@ -255,7 +250,16 @@ def main():
                         metavar="SIZE",
                         help="Size of the queue of files to analyze")
 
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+def main():
+    """Main function for running the analyzer.
+    Options will be parsed from the command line."""
+
+    availableCommands = ["analyze", "list-forms", "stats"]
+
+    args = parse_args(availableCommands)
 
     if not args.command in availableCommands:
         parser.error("Unknown command: %s" % (args.command))
