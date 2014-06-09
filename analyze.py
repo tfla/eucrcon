@@ -61,7 +61,7 @@ class ConsultationZipHandler:
         self.fileList = []
         self.fileListByZip = {} # zip filename -> list of containing files
         self.languageDict = {}
-        self.zipFiles = {}      # filename -> ZipFile object
+        self.zipFiles = []      # (filename, ZipFile object)
 
     def addZip(self, zipFilename):
         """
@@ -69,7 +69,7 @@ class ConsultationZipHandler:
         """
 
         zipFile = zipfile.ZipFile(zipFilename)
-        self.zipFiles[zipFilename] = zipFile # Save in instance dict
+        self.zipFiles.append((zipFilename, zipFile)) # Save in instance list
         self.fileListByZip[zipFilename] = []
 
         """
@@ -119,16 +119,18 @@ class ConsultationZipHandler:
             else:
                 self.languageDict[language] = {"count": 1}
 
-    def analyze(self, randomize=False, showProgress=False, printNames=False, numProcesses=1, numberOfFiles=0, queueSize=100, filePattern="*"):
+    def analyze(self, randomize=False, showProgress=False, printNames=False, numProcesses=1, numberOfFiles=0, queueSize=100, filePattern="*", skip=0):
         if numberOfFiles == 0:
             numOfFilesToAnalyze = self.getCount()
         else:
             numOfFilesToAnalyze = min(self.getCount(), numberOfFiles)
-        zipFilenames = self.zipFiles.keys()
+        zipFilenames = [x[0] for x in self.zipFiles]
         if randomize:
             random.shuffle(zipFilenames)
         count = 0
         print("Queue size:", queueSize)
+        if skip:
+            print("Skipping first {} files".format(skip))
         print("Analyzing using {} process(s)...".format(numProcesses))
         inputQueue = multiprocessing.Queue(queueSize)
         resultQueue = multiprocessing.Queue()
@@ -140,19 +142,20 @@ class ConsultationZipHandler:
         startTime = time.time()
         abort = False
         try:
-            for zipFilename in zipFilenames:
+            for (zipFilename, zipFile) in self.zipFiles:
                 if abort:
                     break
-                zipFile = self.zipFiles[zipFilename] #ZipFile object
                 filenames = self.fileListByZip[zipFilename]
                 if randomize:
                     random.shuffle(filenames)
                 for filename in filter(lambda x: fnmatch.fnmatch(x.lower(), filePattern), filenames):
-                    if numberOfFiles:
-                        if count >= numberOfFiles:
-                            print("Aborting after enqueuing {} files".format(numberOfFiles))
-                            abort = True
-                            break
+                    if skip:
+                        skip -= 1
+                        continue
+                    if numberOfFiles and count >= numberOfFiles:
+                        print("Aborting after enqueuing {} files".format(numberOfFiles))
+                        abort = True
+                        break
                     if not filename.lower().endswith(".odt"):
                         continue
                     if printNames:
@@ -268,6 +271,11 @@ def parse_args(availableCommands):
                         metavar="PATTERN",
                         default="*",
                         help="File pattern for files to analyze")
+    parser.add_argument("--offset",
+                        dest="offset",
+                        metavar="NUM",
+                        type=int,
+                        help="Skip the first NUM files")
 
     return parser.parse_args()
 
@@ -285,11 +293,9 @@ def main():
     print("The following zip files will be handled:")
     print("\n".join(map(lambda s: "* %s" % (s), args.files)))
 
-    print("")
     count = 0
     zipHandler = ConsultationZipHandler()
     for zipFile in args.files:
-        print("Adding %s to handling list..." % (zipFile))
         zipHandler.addZip(zipFile)
 
     print("")
@@ -324,7 +330,8 @@ def main():
                            printNames=args.printNames,
                            numberOfFiles=args.numberOfFiles,
                            queueSize=args.queueSize,
-                           filePattern=args.filePattern)
+                           filePattern=args.filePattern,
+                           skip=args.offset)
 
 if __name__ == "__main__":
     multiprocessing.freeze_support() #Only for Windows executables (py2exe etc.)
