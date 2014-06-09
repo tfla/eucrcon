@@ -23,31 +23,27 @@ import sys
 import time
 import zipfile
 
-from queue import Empty
-
 if sys.version_info >= (3,):
     from io import BytesIO as FileLike
 else:
     from cStringIO import StringIO as FileLike
 
 
-def processWorker(iq):
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+def processWorker(iq, oq):
+    signal.signal(signal.SIGINT, signal.SIG_IGN) # Processes will receive SIGINT on Ctrl-C in main program. Just ignore it.
+    resDict = {}
     for odtFilename, odtContent in iter(iq.get, "STOP"):
-        try:
-            odtFile = FileLike(odtContent) #FileLike provides seek()
-            if zipfile.is_zipfile(odtFile):
-                try:
-                    parser.parser(odtFile)
-                except parser.NumberingException as e:
-                    print("Error parsing {}: {}".format(odtFilename, str(e)))
-                except parser.NoAnswerException as e:
-                    print("Error parsing {}: {}".format(odtFilename, str(e)))
-            else:
-                print("ERROR: {} is not a valid zip file!".format(odtFilename))
-            odtFile.close()
-        except Empty:
-            pass
+        odtFile = FileLike(odtContent) #FileLike provides seek()
+        if zipfile.is_zipfile(odtFile):
+            try:
+                resDict = parser.parser(odtFile)
+            except (parser.NumberingException, parser.NoAnswerException) as e:
+                resDict["exceptionString"] = str(e)
+                print("Error parsing {}: {}".format(odtFilename, str(e)))
+        else:
+            resDict["error"] = "Not a valid zip file"
+            print("ERROR: {} is not a valid zip file!".format(odtFilename))
+        odtFile.close()
 
 
 class ConsultationZipHandler:
@@ -128,10 +124,11 @@ class ConsultationZipHandler:
         count = 0
         print("Queue size:", queueSize)
         print("Analyzing using {} process(s)...".format(numProcesses))
-        q = multiprocessing.Queue(queueSize)
+        iq = multiprocessing.Queue(queueSize)
+        oq = multiprocessing.Queue()
         processes = []
         for i in range(numProcesses):
-            process = multiprocessing.Process(name="{}".format(i + 1), target=processWorker, args=[q])
+            process = multiprocessing.Process(name="{}".format(i + 1), target=processWorker, args=[iq, oq])
             process.start()
             processes.append(process)
         startTime = time.time()
@@ -157,7 +154,7 @@ class ConsultationZipHandler:
                     odtFilename = filename
                     odtContent = zipFile.read(odtFilename)
 
-                    q.put((odtFilename, odtContent))
+                    iq.put((odtFilename, odtContent))
 
                     count += 1
                     if showProgress:
@@ -167,7 +164,7 @@ class ConsultationZipHandler:
             print("  Aborting")
         print("Waiting for files in queue to be analyzed...")
         for i in range(numProcesses):
-            q.put("STOP")
+            iq.put("STOP")
         for process in processes:
             process.join()
         print("{:.2%} analyzed ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
