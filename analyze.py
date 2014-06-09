@@ -37,7 +37,12 @@ def processWorker(iq):
         try:
             odtFile = FileLike(odtContent) #FileLike provides seek()
             if zipfile.is_zipfile(odtFile):
-                parser.parseOdfFile(odtFile)
+                try:
+                    parser.parser(odtFile)
+                except parser.NumberingException as e:
+                    print("Error parsing {}: {}".format(odtFilename, str(e)))
+                except parser.NoAnswerException as e:
+                    print("Error parsing {}: {}".format(odtFilename, str(e)))
             else:
                 print("ERROR: {} is not a valid zip file!".format(odtFilename))
             odtFile.close()
@@ -234,9 +239,9 @@ def parse_args(availableCommands):
                         help="Print filenames of all processed files")
     parser.add_argument("-j",
                         dest="processes",
-                        default=multiprocessing.cpu_count(),
+                        default=max(multiprocessing.cpu_count() - 1, 1),
                         type=int,
-                        help="Number of processes to use. Defaults to number of CPUs.")
+                        help="Number of processes to use. Defaults to number of CPUs - 1.")
     parser.add_argument("-n",
                         "--num",
                         dest="numberOfFiles",
@@ -248,7 +253,7 @@ def parse_args(availableCommands):
                         "--queue-size",
                         dest="queueSize",
                         type=int,
-                        default=100,
+                        default=10,
                         metavar="SIZE",
                         help="Size of the queue of files to analyze")
 
