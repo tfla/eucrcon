@@ -45,6 +45,8 @@ def processWorker(iq, oq):
             print("ERROR: {} is not a valid zip file!".format(odtFilename))
         odtFile.close()
 
+        oq.put(resDict)
+
 
 class ConsultationZipHandler:
     """
@@ -124,11 +126,11 @@ class ConsultationZipHandler:
         count = 0
         print("Queue size:", queueSize)
         print("Analyzing using {} process(s)...".format(numProcesses))
-        iq = multiprocessing.Queue(queueSize)
-        oq = multiprocessing.Queue()
+        inputQueue = multiprocessing.Queue(queueSize)
+        resultQueue = multiprocessing.Queue()
         processes = []
         for i in range(numProcesses):
-            process = multiprocessing.Process(name="{}".format(i + 1), target=processWorker, args=[iq, oq])
+            process = multiprocessing.Process(name="{}".format(i + 1), target=processWorker, args=[inputQueue, resultQueue])
             process.start()
             processes.append(process)
         startTime = time.time()
@@ -154,7 +156,7 @@ class ConsultationZipHandler:
                     odtFilename = filename
                     odtContent = zipFile.read(odtFilename)
 
-                    iq.put((odtFilename, odtContent))
+                    inputQueue.put((odtFilename, odtContent))
 
                     count += 1
                     if showProgress:
@@ -164,7 +166,10 @@ class ConsultationZipHandler:
             print("  Aborting")
         print("Waiting for files in queue to be analyzed...")
         for i in range(numProcesses):
-            iq.put("STOP")
+            inputQueue.put("STOP")
+        results = []
+        for i in range(numOfFilesToAnalyze): # There must be exactly this number of dictionaries in the result queue
+            results.append(resultQueue.get())
         for process in processes:
             process.join()
         print("{:.2%} analyzed ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
