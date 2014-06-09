@@ -14,6 +14,7 @@ __author__ = "Henrik Laban Torstensson, Andreas Söderlund, Timmy Larsson"
 __license__ = "MIT"
 
 import argparse
+import fnmatch
 import multiprocessing
 import os
 import parser
@@ -118,7 +119,7 @@ class ConsultationZipHandler:
             else:
                 self.languageDict[language] = {"count": 1}
 
-    def analyze(self, randomize=False, showProgress=False, printNames=False, numProcesses=1, numberOfFiles=0, queueSize=100):
+    def analyze(self, randomize=False, showProgress=False, printNames=False, numProcesses=1, numberOfFiles=0, queueSize=100, filePattern="*"):
         if numberOfFiles == 0:
             numOfFilesToAnalyze = self.getCount()
         else:
@@ -146,7 +147,7 @@ class ConsultationZipHandler:
                 filenames = self.fileListByZip[zipFilename]
                 if randomize:
                     random.shuffle(filenames)
-                for filename in filenames:
+                for filename in filter(lambda x: fnmatch.fnmatch(x.lower(), filePattern), filenames):
                     if numberOfFiles:
                         if count >= numberOfFiles:
                             print("Aborting after enqueuing {} files".format(numberOfFiles))
@@ -171,7 +172,8 @@ class ConsultationZipHandler:
         for i in range(numProcesses):
             inputQueue.put("STOP")
         results = []
-        for i in range(numOfFilesToAnalyze): # There must be exactly this number of dictionaries in the result queue
+        print("Fetching {} results from result queue...".format(count))
+        for i in range(count): # There must be exactly this number of dictionaries in the result queue
             results.append(resultQueue.get())
         for process in processes:
             process.join()
@@ -261,6 +263,11 @@ def parse_args(availableCommands):
                         default=10,
                         metavar="SIZE",
                         help="Size of the queue of files to analyze")
+    parser.add_argument("--file-pattern",
+                        dest="filePattern",
+                        metavar="PATTERN",
+                        default="*",
+                        help="File pattern for files to analyze")
 
     return parser.parse_args()
 
@@ -316,7 +323,8 @@ def main():
                            showProgress=args.progress,
                            printNames=args.printNames,
                            numberOfFiles=args.numberOfFiles,
-                           queueSize=args.queueSize)
+                           queueSize=args.queueSize,
+                           filePattern=args.filePattern)
 
 if __name__ == "__main__":
     multiprocessing.freeze_support() #Only for Windows executables (py2exe etc.)
