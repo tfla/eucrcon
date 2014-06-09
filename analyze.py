@@ -119,7 +119,10 @@ class ConsultationZipHandler:
                 self.languageDict[language] = {"count": 1}
 
     def analyze(self, randomize=False, showProgress=False, printNames=False, numProcesses=1, numberOfFiles=0, queueSize=100):
-        numOfFilesToAnalyze = max(self.getCount(), numberOfFiles)
+        if numberOfFiles == 0:
+            numOfFilesToAnalyze = self.getCount()
+        else:
+            numOfFilesToAnalyze = min(self.getCount(), numberOfFiles)
         zipFilenames = self.zipFiles.keys()
         if randomize:
             random.shuffle(zipFilenames)
