@@ -11,14 +11,20 @@ Handles the database
 __author__ = "Henrik Laban Torstensson, Andreas Söderlund, Timmy Larsson"
 __license__ = "MIT"
 
-import sqlite3
+import sqlite3, os
 
 class Database():
     """Represents a SQLite database"""
 
-    def __init__(self, database='responses.sqlite'):
+    def __init__(self, database='responses.sqlite', overwrite=False):
         """Initialize a connection to the database <database> and
         create tables needed if they don't exist."""
+
+        if overwrite:
+            try:
+                os.remove(database)
+            except FileNotFoundError:
+                print("Could not find database-file, will not overwrite")
 
         conn = sqlite3.connect(database)
         self.cur = conn.cursor()
@@ -108,7 +114,7 @@ def test():
     """Tests the database handling by creating the database file
     with the defined schema"""
 
-    db = Database()
+    db = Database("teste", True)
 
 if __name__ == "__main__":
     test()
