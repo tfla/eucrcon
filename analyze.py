@@ -84,6 +84,8 @@ class ConsultationZipHandler:
             if formName == "":
                 # Directory entry
                 continue
+            if formName == "Thumbs.db":
+                continue
             self.fileList.append(formName)
             self.fileListByZip[zipFilename].append(filename)
             self.count += 1
