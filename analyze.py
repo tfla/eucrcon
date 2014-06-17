@@ -32,14 +32,14 @@ else:
 
 def processWorker(iq, oq):
     signal.signal(signal.SIGINT, signal.SIG_IGN) # Processes will receive SIGINT on Ctrl-C in main program. Just ignore it.
-    resDict = {}
     for odtFilename, odtContent in iter(iq.get, "STOP"):
+        resDict = {}
         odtFile = FileLike(odtContent) #FileLike provides seek()
         if zipfile.is_zipfile(odtFile):
             try:
                 resDict = parser.parser(odtFile)
             except (parser.NumberingException, parser.NoAnswerException) as e:
-                resDict["exceptionString"] = str(e)
+                resDict["parsingException"] = str(e)
                 print("Error parsing {}: {}".format(odtFilename, str(e)))
         else:
             resDict["error"] = "Not a valid zip file"
@@ -184,6 +184,9 @@ class ConsultationZipHandler:
         duration = time.time() - startTime
         if count > 0:
             print("{} files analyzed in {:.1f} s (avg {:.3f} s)".format(count, duration, duration/count))
+        exceptionList = list(filter(lambda x: "parsingException" in x.keys(), results))
+        nbrOfParsingExceptions = len(exceptionList)
+        print("{} exceptions in {} files ({:.2%})".format(nbrOfParsingExceptions, count, float(nbrOfParsingExceptions) / float(count)))
 
     def listFiles(self):
         return self.fileList
