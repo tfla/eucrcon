@@ -125,8 +125,7 @@ class Database():
             self.save()
 
     def putQuestion(self, question, _type):
-        for tmp in [(question, _type)]:
-            self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?)', tmp)
+        self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?)', (question, _type))
         
     def listQuestions(self):
         questions = self.cur.execute('SELECT * FROM questions ORDER BY id')
@@ -140,9 +139,8 @@ class Database():
         questions = self.cur.execute('SELECT * FROM questions WHERE type=?', _type)
         return questions.fetchall()
         
-    def putAnswer(self, num, question, choice, freeText):
-        for tmp in [(num, question, choice, freeText)]:
-            self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?, ?, ?)', tmp)
+    def putAnswer(self, formNbr, questionNbr, choice, freeText):
+        self.cur.execute('INSERT INTO answers VALUES (NULL, ?, ?, ?, ?)', (formNbr, questionNbr, str(choice), str(freeText)))
 
     def listAnswers(self):
         answers = self.cur.execute('SELECT * FROM answers ORDER BY id')
@@ -165,8 +163,9 @@ class Database():
         return answer.fetchall()
         
     def putForm(self, name, _type, lang):
-        for tmp in [(name, _type, lang)]:
-            self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?, ?)', tmp)
+        self.cur.execute('INSERT INTO forms VALUES (NULL, ?, ?, ?)', (str(name), str(_type), str(lang)))
+
+        return self.cur.lastrowid
         
     def listForms(self):
         forms = self.cur.execute('SELECT * FROM forms ORDER BY id')

@@ -14,6 +14,7 @@ __author__ = "Henrik Laban Torstensson, Andreas Söderlund, Timmy Larsson, Nikla
 __license__ = "MIT"
 
 import argparse
+import database
 import fnmatch
 import multiprocessing
 import os
@@ -86,6 +87,8 @@ class ConsultationZipHandler:
             if formName == "":
                 # Directory entry
                 continue
+            if formName == "Thumbs.db":
+                continue
             self.fileList.append(formName)
             self.fileListByZip[zipFilename].append(filename)
             self.count += 1
@@ -121,7 +124,7 @@ class ConsultationZipHandler:
             else:
                 self.languageDict[language] = {"count": 1}
 
-    def analyze(self, randomize=False, showProgress=False, printNames=False, numProcesses=1, numberOfFiles=0, queueSize=100, filePattern="*", skip=0, convert2odt=False):
+    def analyze(self, randomize=False, showProgress=False, printNames=False, numProcesses=1, numberOfFiles=0, queueSize=100, filePattern="*", skip=0, wipeDatabase=False, convert2odt=False):
         if numberOfFiles == 0:
             numOfFilesToAnalyze = self.getCount()
         else:
@@ -129,6 +132,10 @@ class ConsultationZipHandler:
         zipFilenames = [x[0] for x in self.zipFiles]
         if randomize:
             random.shuffle(zipFilenames)
+
+        print("Initializing database...")
+        db = database.Database(overwrite=wipeDatabase)
+        print("")
         count = 0
         print("Queue size:", queueSize)
         if skip:
@@ -206,6 +213,16 @@ class ConsultationZipHandler:
         exceptionList = list(filter(lambda x: "parsingException" in x.keys(), results))
         nbrOfParsingExceptions = len(exceptionList)
         print("{} exceptions in {} files ({:.2%})".format(nbrOfParsingExceptions, count, float(nbrOfParsingExceptions) / float(count)))
+        print("")
+        print("Inserting into database...")
+        for resDict in results:
+            if not "answers" in resDict.keys():
+                continue
+            formId = db.putForm(resDict["name"], resDict["type"], "")
+            for (questionNbr, answer) in enumerate(resDict["answers"], start=1):
+                db.putAnswer(formId, questionNbr, answer[0], answer[1])
+        print("Committing to disk...")
+        db.save()
 
     def convertFiles(self, tempdir, zipFile, filename, inputQueue, extension):
         thisTempFile, thisTempFileName = tempfile.mkstemp(dir=tempdir)
@@ -322,6 +339,10 @@ def parse_args(availableCommands):
                         metavar="NUM",
                         type=int,
                         help="Skip the first NUM files")
+    parser.add_argument("--wipe-db",
+                        dest="wipeDatabase",
+                        action="store_true",
+                        help="Wipe the SQLite file before saving analysis results")
 
     return parser.parse_args()
 
@@ -378,7 +399,8 @@ def main():
                            queueSize=args.queueSize,
                            filePattern=args.filePattern,
                            skip=args.offset,
-                           convert2odt=args.convert2odt)
+                           convert2odt=args.convert2odt,
+                           wipeDatabase=args.wipeDatabase)
 
 if __name__ == "__main__":
     multiprocessing.freeze_support() #Only for Windows executables (py2exe etc.)
