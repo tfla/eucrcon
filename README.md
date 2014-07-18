@@ -11,7 +11,7 @@ Recommended execution:
 ```
 # python3 download_files.py
 # python3 analyze.py stats input/*.zip
-# python3 analyze.py analyze input/users_en.zip #Doesn't do anything meaningful right now, but takes long time anyway :)
+# python3 analyze.py analyze input/*.zip
 ```
 
 Using unoconv (https://github.com/dagwieers/unoconv) and pdf2odt (https://github.com/gutschke/pdf2odt) we can convert .doc, .doxc and .pdf to .odt, a format we handle with reasonable accuracy. The conversion is done without dependencies on online services or brittle code.
