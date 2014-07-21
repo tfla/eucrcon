@@ -88,7 +88,7 @@ def findName(element, nameTag='Name:'):
             if txt.nodeType == txt.TEXT_NODE:
                 if nameTag in txt.data:
                     for cn in st.nextSibling.childNodes:
-                        if cn.nodeType == cn.TEXT_NODE and not "…" in cn:
+                        if cn.nodeType == cn.TEXT_NODE and not "…" in cn.data:
                             ans += cn.data + " "
                     return ans
     return "Could not find the string {}".format(nameTag)
