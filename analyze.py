@@ -26,7 +26,7 @@ import signal
 import sys
 import time
 import zipfile
-import shutil.rmtree
+from shutil import rmtree
 
 if sys.version_info >= (3,):
     from io import BytesIO as FileLike
