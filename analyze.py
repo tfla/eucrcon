@@ -226,7 +226,7 @@ class ConsultationZipHandler:
         print("Committing to disk...")
         db.save()
         if convert2odt and "eucrcon" in tempdir:
-            shutil.rmtree(tempdir)
+            rmtree(tempdir)
 
     def convertFiles(self, tempdir, zipFile, filename, inputQueue, extension):
         thisTempFile, thisTempFileName = tempfile.mkstemp(dir=tempdir)
