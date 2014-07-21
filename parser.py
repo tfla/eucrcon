@@ -12,25 +12,24 @@ class NumberingException(Exception):
 class NoAnswerException(Exception):
     pass
 
-def findAttributeRecursive(element, tagName):
+def hasAttributeRecursive(element, tagName):
     """
     Searches an element recursively to find if a certain attribute is
     present.
     """
-    boo = False
-    if element.hasAttribute(tagName):
-        boo = True
+    found = False
     for node in element.childNodes:
         if isinstance(node, minidom.Element) and node.hasAttributes():
             if node.hasAttribute(tagName):
-                boo = True
+                found = True
             else:
-                boo = findAttributeRecursive(node, tagName)
-        if boo: break
+                found = hasAttributeRecursive(node, tagName)
+        if found:
+            break
     else:
         if element.hasAttribute(tagName):
-            boo = True
-    return boo
+            found = True
+    return found
        
 def getTextRecursive(element):
     """
@@ -131,7 +130,7 @@ def countTag(element, tag = 'text:continue-numbering'):
     
     counter = 0    
     for element in paras:
-        if findAttributeRecursive(element, tag):
+        if hasAttributeRecursive(element, tag):
             counter = counter + 1
     return counter
     
@@ -166,7 +165,7 @@ def findAnswers(element, questions, openquest, styleTags=['style:text-underline-
     questionNr = 0 # will range from 0 to 99 as each element of paras is gone through
     foundQuest = False # If questionNr is in questions it turns to true
     for element in paras:
-        if findAttributeRecursive(element, tag):
+        if hasAttributeRecursive(element, tag):
             if questionNr in questions:
                 if foundQuest:
                     ansList.append(['NO COMMENT', ' ']) #If nothing has been underlined then no free text should exist.
