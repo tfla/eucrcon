@@ -225,7 +225,7 @@ class ConsultationZipHandler:
                 db.putAnswer(formId, questionNbr, answer[0], answer[1])
         print("Committing to disk...")
         db.save()
-        if convert2odt:
+        if convert2odt and "eucrcon" in tempdir:
             shutil.rmtree(tempdir)
 
     def convertFiles(self, tempdir, zipFile, filename, inputQueue, extension):
