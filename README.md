@@ -14,7 +14,7 @@ Recommended execution:
 # python3 analyze.py analyze input/*.zip
 ```
 
-Using unoconv (https://github.com/dagwieers/unoconv) and pdf2odt (https://github.com/gutschke/pdf2odt) we can convert .doc, .doxc and .pdf to .odt, a format we handle with reasonable accuracy. The conversion is done without dependencies on online services or brittle code.
+Using unoconv (https://github.com/dagwieers/unoconv) and pdf2odt (https://github.com/gutschke/pdf2odt) we can convert .doc, .docx and .pdf to .odt, a format we handle with reasonable accuracy. The conversion is done without dependencies on online services or brittle code.
 
 ``` xmllint --format file.xml > output.xml ``` gives an indented, readable xml-file instead of an obfuscated oneliner for manual debugging.
 
