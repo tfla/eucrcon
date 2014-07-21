@@ -26,6 +26,7 @@ import signal
 import sys
 import time
 import zipfile
+import shutil.rmtree
 
 if sys.version_info >= (3,):
     from io import BytesIO as FileLike
@@ -157,7 +158,8 @@ class ConsultationZipHandler:
                 filenames = self.fileListByZip[zipFilename]
                 if randomize:
                     random.shuffle(filenames)
-                tempdir = tempfile.mkdtemp()
+                if convert2odt:
+                    tempdir = tempfile.mkdtemp(prefix="eucrcon-")
                 for filename in filter(lambda x: fnmatch.fnmatch(x.lower(), filePattern), filenames):
                     fileending = filename.lower()[-5::]
                     if skip:
@@ -223,6 +225,8 @@ class ConsultationZipHandler:
                 db.putAnswer(formId, questionNbr, answer[0], answer[1])
         print("Committing to disk...")
         db.save()
+        if convert2odt:
+            shutil.rmtree(tempdir)
 
     def convertFiles(self, tempdir, zipFile, filename, inputQueue, extension):
         thisTempFile, thisTempFileName = tempfile.mkstemp(dir=tempdir)
