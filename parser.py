@@ -142,9 +142,9 @@ def findAnswers(element, questions, openquest, styleTags=['style:text-underline-
     this function will go through all the childNodes of the node 'office:body'
     of the file content.xml. for each childNode it will see if there 'tag' is in
     the node recursively. If there is it will increase questionNr by one. if questionNr
-    matches any of the numbers in 'questions' it will start seaching for an underlined
+    matches any of the numbers in 'questions' it will start searching for an underlined
     text. If it finds underlined text the underlined text will be regarded as an
-    answer and appended to the list 'ansList' if the function fins a new question
+    answer and appended to the list 'ansList' if the function finds a new question
     without having found an underlined text it will append 'NO COMMENT' to the
     answer list. It will return a list containing the answers and possible free text.
     As it is now, free text is not implemented yet but is just added as ' ' for
