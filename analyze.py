@@ -196,7 +196,6 @@ class ConsultationZipHandler:
                     if showProgress:
                         if count % showProgress == 0:
                             print("{:.2%} enqueued ({}/{})".format(float(count) / float(numOfFilesToAnalyze), count, numOfFilesToAnalyze))
-                #delete the temp dir    
         except KeyboardInterrupt:
             print("  Aborting")
         print("Waiting for files in queue to be analyzed...")
