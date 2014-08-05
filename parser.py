@@ -244,6 +244,24 @@ def parser(filename, questions=None, openquest=None, nameTag='Name:', styleTags=
         raise NoAnswerException("Didn't find any underlined answers in the file")
     ansDict = {'name': respondNam, 'type': respondTyp, 'answers': respondAns}
     return ansDict
+
+def findAnswersBuffered():
+    pass
+    #Stub for a buffered find-answer function
+    #
+    #TODO: Prerequisites: An ordered list of strings "questions" where each string is an exact quote of the questions in the questionare. 
+    #
+    #TODO: First search through the document for styles, store names of underlined or bold styles. Store the names for each in a hashmap. See existing funtions for this.
+    #TODO: Next, read text-nodes into a text string acting as a buffer. Also store style name and text in a numbered list ("styleList"). 
+    #TODO: For each read node, check if the topmost of the "questions" matches the end of the string buffer.
+    #TODO: If match, split buffer string on question. The first part of the string is the answer to the PREVIOUS question ( or the intro if splitting on the first one)
+    #TODO: Send accrued numbered list, number of the question split upon and the split answer to function designed to get data from answers. 
+    #TODO: Set the second part of the string as the new buffer and continue.
+    
+def parseBufferedAnsers(buffer="",styleList={},question=0, boldstyles=[], underlinedstyles=[]):
+    pass
+    #TODO: The styleList is searched for bold/underlined styles. Those found are put in buffers. These are answers.
+    
     
 if __name__ == '__main__':
     filename = sys.argv[1]
