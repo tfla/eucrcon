@@ -47,6 +47,29 @@ def getTextRecursive(element):
     joined = " ".join(text)
     return re.sub(" +", " ", joined).strip() # Remove duplicate, leading and trailing spaces
 
+def findFreetext(element):
+    """
+    This functions tries to find the free text
+    """
+    if element.nodeName == 'text:p':
+        paras = [element]
+    else:
+        paras = element.getElementsByTagName('text:p')
+    text = [] # This will collect all the text
+
+    for st in paras:
+        paragraphText = ''
+        for ch in st.childNodes:
+            if ch.nodeType == ch.TEXT_NODE:
+                paragraphText += ch.data
+        text.append(paragraphText)
+
+    if len(text) == 0: # If it didn't find any text then len(text)==0 and ' ' returned
+        return ' '
+    else:
+        joined = " ".join(text)
+        return re.sub(" +", " ", joined).strip() # Remove duplicate, leading and trailing spaces
+
 def findUnderlinedRecursive(element, styles ,tag = 'text:style-name'):
     """
     This function searches through the element recursively to see if there exists
@@ -139,7 +162,7 @@ def findAnswers(element, questions, openquest, styleTags=['style:text-underline-
     """
     This is the new updated findAnswers method, the old one is saved as findAnswers2.
     this function will go through all the childNodes of the node 'office:body'
-    of the file content.xml. for each childNode it will see if there 'tag' is in
+    of the file content.xml. for each childNode it will see if their 'tag' is in
     the node recursively. If there is it will increase questionNr by one. if questionNr
     matches any of the numbers in 'questions' it will start searching for an underlined
     text. If it finds underlined text the underlined text will be regarded as an
@@ -160,27 +183,56 @@ def findAnswers(element, questions, openquest, styleTags=['style:text-underline-
     numberOfCountAttribute = countTag(element, tag)
     if not numberOfCountAttribute == 100: # If there are more or less 'text:continue-numbering' than 100 then this function will fail!
         raise NumberingException("Found {} number of text:continue-numbering which is not supported".format(numberOfCountAttribute))
-    
-    ansList = [] # The answers.
-    questionNr = 0 # will range from 0 to 99 as each element of paras is gone through
-    foundQuest = False # If questionNr is in questions it turns to true
+
+    # collect all question elements by number into an array
+    questionNr = 0
+    questionsByNr = []
+    currentQuestionElements = []
     for element in paras:
         if hasAttributeRecursive(element, tag):
-            if questionNr in questions:
-                if foundQuest:
-                    ansList.append(['NO COMMENT', ' ']) #If nothing has been underlined then no free text should exist.
-                foundQuest = True
-                if questionNr in openquest:
-                    ansList.append(['OPEN QUESTION', ' ']) #implement a method to find the text added by the respondent!
-                    foundQuest = False # If it's an open question then it has found an answer.
+            if questionNr > 0:
+                questionsByNr.append(currentQuestionElements)
+            currentQuestionElements = [] # reset current questionElements
             questionNr = questionNr + 1
-        if foundQuest:
-            ifFound, text = findUnderlinedRecursive(element, underlinedStyles)
-            if ifFound:
-                ansList.append([text, ' ']) # Add a method to find the text added by the respondent!
-                foundQuest = False # It has found an answer and start seaching for a new question.
-    if len(ansList)<80: # The last [open question] is not found in this function and thus the last NO COMMENT is added manually.
-        ansList.append(['OPEN QUESTION', ' ']) #implement a method to find the text added by the respondent!
+        currentQuestionElements.append(element)
+    questionsByNr.append(currentQuestionElements)
+
+    # extract questionType and freeText
+    ansList = []
+    questionNr = 0
+    questionType = 'NO COMMENT' # if not open and not underlined, then it stays no comment
+    for q in questionsByNr:
+        if questionNr in openquest:
+            # open question
+            questionType = 'OPEN QUESTION'
+        else:
+            # look for underlined
+            for ele in q:
+                ifFound, text = findUnderlinedRecursive(ele, underlinedStyles)
+                if ifFound:
+                    questionType = text
+        questionFreeText = []
+        eleNr = 0
+        for ele in q:
+            # todo: ignore "YES", "NO", etc. text.
+            if eleNr > 0: # ignore first line (question text)
+                eleString = findFreetext(ele)
+                if '[Open question]' in eleString:
+                    continue
+                if ' YES' in eleString:
+                    continue
+                if ' NO' in eleString:
+                    continue
+                if ' NO OPINION' in eleString:
+                    continue
+                if '[Openquestion]' in eleString:
+                    continue
+                questionFreeText.append(eleString)
+            eleNr += 1
+        freetextString = " ".join(questionFreeText)
+        ansList.append([questionType, freetextString])
+        questionNr = questionNr + 1
+
     return ansList
                 
 
@@ -203,7 +255,7 @@ def parser(filename, questions=None, openquest=None, nameTag='Name:', styleTags=
     
     # There are a total of 100 places in the file (hopefully) that have the part
     # 'text:continue-numbering'. All of the questions will have these before.
-    # The list 'questions' will mark at wich number among the tags that each question
+    # The list 'questions' will mark at which number among the tags that each question
     # appears.
     if not questions:
         questions = list(range(14,34)) + list(range(35,78)) + list(range(79,87)) + [88, 89, 90, 92, 93, 94, 96, 97, 99]
