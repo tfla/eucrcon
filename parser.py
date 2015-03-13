@@ -7,6 +7,11 @@ import sys
 import zipfile as zf
 from xml.dom import minidom
 
+class NumberingException(Exception):
+    pass
+class NoAnswerException(Exception):
+    pass
+
 def findAttributeRecursive(element, tagName):
     """
     Searches an element recursively to find if a certain attribute is
@@ -155,7 +160,7 @@ def findAnswers(element, questions, openquest, styleTags=['style:text-underline-
     paras = element.getElementsByTagName('office:body')[0].childNodes[0].childNodes # Open all the childNodes of 'office:body'
     numberOfCountAttribute = countTag(element, tag)
     if not numberOfCountAttribute == 100: # If there are more or less 'text:continue-numbering' than 100 then this function will fail!
-        print("Found {} number of text:continue-numbering which is not supported".format(numberOfCountAttribute))
+        raise NumberingException("Found {} number of text:continue-numbering which is not supported".format(numberOfCountAttribute))
     
     ansList = [] # The answers.
     questionNr = 0 # will range from 0 to 99 as each element of paras is gone through
@@ -179,108 +184,8 @@ def findAnswers(element, questions, openquest, styleTags=['style:text-underline-
         ansList.append(['OPEN QUESTION', ' ']) #implement a method to find the text added by the respondent!
     return ansList
                 
-    
-def findAnswers2(odtFile, questFile):
-    """
-    This function finds the answers in the odtFile by searching for each string
-    in the questFile in succession through the text:p parts and returning the
-    underlined answer between the questions. If no underline is found,
-    "NO RESPONSE" is returned.
-    """
-    underlinedStyles = findStyles(odtFile)
-#    questList = []
-    with open(questFile, 'r') as tmpfile:
-        tmpstring = tmpfile.read()
-        questList = tmpstring.split('\n')[:-1] #The last element is empty and should be ignored.
-    
-#    print(len(questList), "\n")
-    zipodt = zf.ZipFile(odtFile)
-    cont = zipodt.read('content.xml')
-    doc = minidom.parseString(cont)
-    
-    paras = doc.getElementsByTagName('text:p')
-    ansList = []
-    # This part finds the first question and saves that place using the index i
-    questCounter = 0 #Used to see if the paragraph matches one of the questions
-    startindex = 0
-    for i in range(len(paras)):
-        paragraphText = getTextRecursive(paras[i])
-#        for ch in paras[i].childNodes:
-#                if ch.nodeType == ch.TEXT_NODE:
-#                    paragraphText += ch.data
-#        print(paragraphText)
-#        print(questList[questCounter])
-        if questList[questCounter] in paragraphText:
-#            print("Hello!")
-            questCounter += 1
-            startindex = i
-            break
-#    print(startindex)
-    foundAns = False #A Boolean that indicates if a question has been answered
-    # This part searches through the children until it finds an underlined part
-    for i in range(startindex, len(paras)):
-        paragraphText = getTextRecursive(paras[i])
-#        for ch in paras[i].childNodes:
-#            if ch.nodeType == ch.TEXT_NODE:
-#                paragraphText += ch.data
-#        print(questList[questCounter].encode('utf-8'))
-#        print(paragraphText.encode('utf-8'))
-#        print(ansList)
-        if questCounter >= len(questList):
-            pass
-        elif questList[questCounter] in paragraphText:
-#            print(paragraphText)
-#            print('')
-            if not foundAns:
-                ansList.append('NO COMMENT') # If it got to the next question without finding an answer it adds NO COMMENT
-            questCounter += 1
-            foundAns = False
-        if paras[i].hasAttribute('text:style-name'):
-            if paras[i].getAttribute('text:style-name') in underlinedStyles: # It checks if the style is among the styles that underlines the text
-                paragraphText = ''
-                for ch in paras[i].childNodes:
-                    if ch.nodeType == ch.TEXT_NODE:
-                        paragraphText += ch.data
-                ansList.append(paragraphText)
-                foundAns = True
-    
-    #The code doesn't find the last unaswered question. When we add the ability
-    #to store [open question] this should be changed! For now, it just adds
-    #a last unanswered tag for the last question.
-    if len(ansList) == 79:
-        ansList.append('NO COMMENT')
-    return ansList
 
-
-def parseOdfFile(filename):
-    """Parse an ODT file"""
-
-    """
-    Change phrase to the search string you want to search for.
-    It will find the paragraphs where phrase matches
-    and print the paragraph
-    """
-    phrase =  'Name:' #sys.argv[1]
-    nam,typ,ans = parser(filename)
-    if nam == "DIDNT": # Returns True if no answers were found
-        return True
-#    phrase =  'Name:' #sys.argv[1]
-    print(len(ans))
-    print('')
-    for i in ans:
-        print(i)
-    """
-    if zipfile.is_zipfile(filename):
-        myodf = OdfReader(filename) # Create object.
-        myodf.showManifest()        # Tell me what files
-                                    # we have here
-        myodf.getContents()         # Get the raw
-                                    # paragraph text.
-        myodf.findIt(phrase)        # find the phrase ...
-    """
-    return False
-
-def parser(filename, questions=False, openquest=False, nameTag='Name:', styleTags=['style:text-underline-type','style:text-underline-style'], numberingTag='text:continue-numbering'):
+def parser(filename, questions=None, openquest=None, nameTag='Name:', styleTags=['style:text-underline-type','style:text-underline-style'], numberingTag='text:continue-numbering'):
     """
     This is the main function that will open an .odt file and find the name of 
     the respondent and the answers to the 80 questions.
@@ -318,13 +223,28 @@ def parser(filename, questions=False, openquest=False, nameTag='Name:', styleTag
     
     respondTyp = False # The type of the respondent (user/copyright holder/etc.). Not implemented yet!
     respondAns = findAnswers(doc, questions, openquest, styleTags, numberingTag)
-    
+    # Converting every answer to YES/NO...
+    for element in respondAns:
+        if 'YES' in element[0]:
+            element[0] = 'YES'
+        if 'NO' in element[0]:
+            if 'NO OPINION' in element[0]:
+                element[0] = 'NO OPINION'
+            if 'NOOPINION' in element[0]:
+                element[0] = 'NO OPINION'
+            if 'NO COMMENT' in element[0]:
+                element[0] = 'NO COMMENT'
+            else:
+                element[0] = 'NO'
+        
     # Checking if any answers were found
     tmpBool = False
     for element in respondAns:
         if element[0] not in ['NO COMMENT', 'OPEN QUESTION']: tmpBool = True
-    if not tmpBool: return "DIDNT", "FIND", "ANSWERS"
-    return respondNam, respondTyp, respondAns
+    if not tmpBool: 
+        raise NoAnswerException("Didn't find any underlined answers in the file")
+    ansDict = {'name': respondNam, 'type': respondTyp, 'answers': respondAns}
+    return ansDict
     
 if __name__ == '__main__':
     filename = sys.argv[1]
@@ -334,10 +254,12 @@ if __name__ == '__main__':
 #        sys.exit(1)
 #    parseOdfFile(filename)
     print(filename)
-    respondNam, respondTyp, respondAns = parser(filename)
+    ansDict = parser(filename)
+    respondNam = ansDict['name']
+    respondAns = ansDict['answers']
     print(respondNam)
     print( )
     for i in range(len(respondAns)):
-        print('Question {}: {}').format(i+1, respondAns[i])
-    print("Number of found answers: {}").format(len(respondAns))
+        print('Question {}: {}'.format(i+1, respondAns[i]))
+    print("Number of found answers: {}".format(len(respondAns)))
     
