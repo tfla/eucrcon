@@ -19,6 +19,13 @@ class Database():
     def __init__(self, database='responses.sqlite', overwrite=False):
         """Initialize a connection to the database <database> and
         create tables needed if they don't exist."""
+        
+        if overwrite:
+            try:
+                os.remove(database)
+            except FileNotFoundError:
+                print("Database not found, will not overwrite...")
+            
 
         if overwrite:
             try:
@@ -124,67 +131,66 @@ class Database():
             self.save()
 
     def putQuestion(self, question, _type):
-        for tmp in [(question, _type)]:
-            self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?)', tmp)
+        self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?)', (question, _type))
         
     def listQuestions(self):
         questions = self.cur.execute('SELECT * FROM questions ORDER BY id')
         return questions.fetchall()
         
     def getQuestion(self, _id):
-        question = self.cur.execute('SELECT * FROM questions WHERE id=?', _id)
+        question = self.cur.execute('SELECT * FROM questions WHERE id=?', (_id,))
         return question.fetchall()
         
     def getQuestionsByType(self, _type):
-        questions = self.cur.execute('SELECT * FROM questions WHERE type=?', _type)
+        questions = self.cur.execute('SELECT * FROM questions WHERE type=?', (_type,))
         return questions.fetchall()
         
-    def putAnswer(self, num, question, choice, freeText):
-        for tmp in [(num, question, choice, freeText)]:
-            self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?, ?, ?)', tmp)
+    def putAnswer(self, formNbr, questionNbr, choice, freeText):
+        self.cur.execute('INSERT INTO answers VALUES (NULL, ?, ?, ?, ?)', (formNbr, questionNbr, str(choice), str(freeText)))
 
     def listAnswers(self):
         answers = self.cur.execute('SELECT * FROM answers ORDER BY id')
         return answers.fetchall()
     
     def getAnswer(self, _id):
-        answer = self.cur.execute('SELECT * FROM answers WHERE id=?', _id)
+        answer = self.cur.execute('SELECT * FROM answers WHERE id=?', (_id,))
         return answer.fetchall()
         
     def getAnswerByNum(self, num):
-        answer = self.cur.execute('SELECT * FROM answers WHERE num=?', num)
+        answer = self.cur.execute('SELECT * FROM answers WHERE num=?', (num,))
         return answer.fetchall()
         
     def getAnswerByQuestion(self, question):
-        answer = self.cur.execute('SELECT * FROM answers WHERE question=?', question)
+        answer = self.cur.execute('SELECT * FROM answers WHERE question=?', (question,))
         return answer.fetchall()
         
     def getAnswerByChoice(self, choice):
-        answer = self.cur.execute('SELECT * FROM answers WHERE choice=?', choice)
+        answer = self.cur.execute('SELECT * FROM answers WHERE choice=?', (choice,))
         return answer.fetchall()
         
     def putForm(self, name, _type, lang):
-        for tmp in [(name, _type, lang)]:
-            self.cur.execute('INSERT INTO questions VALUES (NULL, ?, ?, ?)', tmp)
+        self.cur.execute('INSERT INTO forms VALUES (NULL, ?, ?, ?)', (str(name), str(_type), str(lang)))
+
+        return self.cur.lastrowid
         
     def listForms(self):
         forms = self.cur.execute('SELECT * FROM forms ORDER BY id')
         return forms.fetchall()
 
     def getForm(self, _id):
-        form = self.cur.execute('SELECT * FROM forms WHERE id=?', _id)
+        form = self.cur.execute('SELECT * FROM forms WHERE id=?', (_id,))
         return form.fetchall()
         
     def getFormByName(self, name):
-        form = self.cur.execute('SELECT * FROM forms WHERE name=?', name)
+        form = self.cur.execute('SELECT * FROM forms WHERE name=?', (name,))
         return form.fetchall()
         
     def getFormByType(self, _type):
-        forms = self.cur.execute('SELECT * FROM forms WHERE type=?', _type)
+        forms = self.cur.execute('SELECT * FROM forms WHERE type=?', (_type,))
         return forms.fetchall()
 
     def getFormByLang(self, lang):
-        forms = self.cut.execute('SELECT * FROM forms WHERE lang=?', lang)
+        forms = self.cur.execute('SELECT * FROM forms WHERE lang=?', (lang,))
         return forms.fetchall()
         
     def save(self):
@@ -197,9 +203,8 @@ def test():
 
     db = Database()
     
-    for i in db.listQuestions():
+    for i in db.getFormByType('False'):
         print(i)
-        input()
     
 if __name__ == "__main__":
     test()

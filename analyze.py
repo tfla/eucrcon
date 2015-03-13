@@ -10,19 +10,23 @@ unicode better.
 # Note to self: Keep this script working with
 # both "python" (2.7.x) and "python3"!
 
-__author__ = "Henrik Laban Torstensson, Andreas Söderlund, Timmy Larsson"
+__author__ = "Henrik Laban Torstensson, Andreas Söderlund, Timmy Larsson, Niklas Bolmdahl"
 __license__ = "MIT"
 
 import argparse
+import database
 import fnmatch
 import multiprocessing
 import os
+import subprocess
+import tempfile
 import parser
 import random
 import signal
 import sys
 import time
 import zipfile
+from shutil import rmtree
 
 if sys.version_info >= (3,):
     from io import BytesIO as FileLike
@@ -32,14 +36,14 @@ else:
 
 def processWorker(iq, oq):
     signal.signal(signal.SIGINT, signal.SIG_IGN) # Processes will receive SIGINT on Ctrl-C in main program. Just ignore it.
-    resDict = {}
     for odtFilename, odtContent in iter(iq.get, "STOP"):
+        resDict = {}
         odtFile = FileLike(odtContent) #FileLike provides seek()
         if zipfile.is_zipfile(odtFile):
             try:
                 resDict = parser.parser(odtFile)
             except (parser.NumberingException, parser.NoAnswerException) as e:
-                resDict["exceptionString"] = str(e)
+                resDict["parsingException"] = str(e)
                 print("Error parsing {}: {}".format(odtFilename, str(e)))
         else:
             resDict["error"] = "Not a valid zip file"
@@ -84,6 +88,8 @@ class ConsultationZipHandler:
             if formName == "":
                 # Directory entry
                 continue
+            if formName == "Thumbs.db":
+                continue
             self.fileList.append(formName)
             self.fileListByZip[zipFilename].append(filename)
             self.count += 1
@@ -119,7 +125,7 @@ class ConsultationZipHandler:
             else:
                 self.languageDict[language] = {"count": 1}
 
-    def analyze(self, randomize=False, showProgress=False, printNames=False, numProcesses=1, numberOfFiles=0, queueSize=100, filePattern="*", skip=0):
+    def analyze(self, randomize=False, showProgress=False, printNames=False, numProcesses=1, numberOfFiles=0, queueSize=100, filePattern="*", skip=0, wipeDatabase=False, convert2odt=False):
         if numberOfFiles == 0:
             numOfFilesToAnalyze = self.getCount()
         else:
@@ -127,6 +133,10 @@ class ConsultationZipHandler:
         zipFilenames = [x[0] for x in self.zipFiles]
         if randomize:
             random.shuffle(zipFilenames)
+
+        print("Initializing database...")
+        db = database.Database(overwrite=wipeDatabase)
+        print("")
         count = 0
         print("Queue size:", queueSize)
         if skip:
@@ -148,7 +158,10 @@ class ConsultationZipHandler:
                 filenames = self.fileListByZip[zipFilename]
                 if randomize:
                     random.shuffle(filenames)
+                if convert2odt:
+                    tempdir = tempfile.mkdtemp(prefix="eucrcon-")
                 for filename in filter(lambda x: fnmatch.fnmatch(x.lower(), filePattern), filenames):
+                    fileending = filename.lower()[-5::]
                     if skip:
                         skip -= 1
                         continue
@@ -156,15 +169,29 @@ class ConsultationZipHandler:
                         print("Aborting after enqueuing {} files".format(numberOfFiles))
                         abort = True
                         break
-                    if not filename.lower().endswith(".odt"):
-                        continue
+                    if fileending.endswith(".odt"):
+                        odtFilename = filename
+                        odtContent = zipFile.read(odtFilename)
+    
+                        inputQueue.put((odtFilename, odtContent))
+                    else:
+                        if not convert2odt:
+                            continue
+                        if fileending.endswith(".doc"):
+                            self.convertFiles(tempdir, zipFile, filename, inputQueue, ".doc")
+                        elif   fileending.endswith(".docx"):
+                            self.convertFiles(tempdir, zipFile, filename, inputQueue, ".docx")
+                        elif fileending.endswith(".rtf"):
+                            self.convertFiles(tempdir, zipFile, filename, inputQueue, ".rtf")
+                        elif fileending.endswith(".pdf"):
+                            self.convertFiles(tempdir, zipFile, filename, inputQueue, ".pdf")
+                        else: 
+                            continue 
                     if printNames:
                         print("Enqueuing {}...".format(filename))
-                    odtFilename = filename
-                    odtContent = zipFile.read(odtFilename)
-
-                    inputQueue.put((odtFilename, odtContent))
-
+                    
+                    
+                    
                     count += 1
                     if showProgress:
                         if count % showProgress == 0:
@@ -184,10 +211,44 @@ class ConsultationZipHandler:
         duration = time.time() - startTime
         if count > 0:
             print("{} files analyzed in {:.1f} s (avg {:.3f} s)".format(count, duration, duration/count))
+        exceptionList = list(filter(lambda x: "parsingException" in x.keys(), results))
+        nbrOfParsingExceptions = len(exceptionList)
+        print("{} exceptions in {} files ({:.2%})".format(nbrOfParsingExceptions, count, float(nbrOfParsingExceptions) / float(count)))
+        print("")
+        print("Inserting into database...")
+        for resDict in results:
+            if not "answers" in resDict.keys():
+                continue
+            formId = db.putForm(resDict["name"], resDict["type"], "")
+            for (questionNbr, answer) in enumerate(resDict["answers"], start=1):
+                db.putAnswer(formId, questionNbr, answer[0], answer[1])
+        print("Committing to disk...")
+        db.save()
+        if convert2odt and "eucrcon" in tempdir:
+            rmtree(tempdir)
+
+    def convertFiles(self, tempdir, zipFile, filename, inputQueue, extension):
+        thisTempFile, thisTempFileName = tempfile.mkstemp(dir=tempdir)
+        #thisTempFile.close()
+        newFilename = thisTempFileName + extension
+        os.rename(thisTempFileName, newFilename)
+        thisTempFileName = newFilename
+        thisTempFile = open(thisTempFileName,'w')
+        odtTempFileName = thisTempFileName + '.odt'
+        thisTempFile.write(zipFile.read(filename))
+        thisTempFile.close()
+        # print(odtTempFileName)
+        # print(thisTempFileName)
+        execline = 'unoconv -f odt -o ' + odtTempFileName + ' '+ thisTempFileName
+        print(execline)
+        subprocess.call(execline, shell=True)
+        convertedFile = open(odtTempFileName, "rb")
+        convertedContent = convertedFile.read()
+        inputQueue.put((odtTempFileName, convertedContent))
 
     def listFiles(self):
         return self.fileList
-
+    
     def getCount(self):
         return self.count
 
@@ -237,6 +298,11 @@ def parse_args(availableCommands):
                         dest="randomize",
                         action="store_true",
                         help="Randomize the processing order of zip files and responses")
+    parser.add_argument("-c",
+                        "--convert2odt",
+                        dest="convert2odt",
+                        action="store_true",
+                        help="Converts almost all non-odt:s to the .odt format for further processing. This takes time.")
     parser.add_argument("--progress",
                         metavar="N",
                         dest="progress",
@@ -276,6 +342,10 @@ def parse_args(availableCommands):
                         metavar="NUM",
                         type=int,
                         help="Skip the first NUM files")
+    parser.add_argument("--wipe-db",
+                        dest="wipeDatabase",
+                        action="store_true",
+                        help="Wipe the SQLite file before saving analysis results")
 
     return parser.parse_args()
 
@@ -331,7 +401,9 @@ def main():
                            numberOfFiles=args.numberOfFiles,
                            queueSize=args.queueSize,
                            filePattern=args.filePattern,
-                           skip=args.offset)
+                           skip=args.offset,
+                           convert2odt=args.convert2odt,
+                           wipeDatabase=args.wipeDatabase)
 
 if __name__ == "__main__":
     multiprocessing.freeze_support() #Only for Windows executables (py2exe etc.)
