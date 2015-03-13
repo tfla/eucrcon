@@ -67,6 +67,24 @@ class ConsultationZipHandler:
         self.languageDict = {}
         self.zipFiles = []      # (filename, ZipFile object)
 
+    def language(self, formName):
+        languageSplit = ".".join(formName.split(".")[:-1]).split("_") #TODO: Split also on "." and "-"
+        if len(languageSplit) == 0:
+            language = "??"
+        else:
+            if len(languageSplit[-1]) < 5:
+                language = languageSplit[-1].lower().strip("-").rstrip(".").lstrip("(").rstrip(")")
+                if len(language) != 2:
+                    language = "??"
+            else:
+                language = "??"
+        if language in (None, ""):
+            language = "??"
+        if language in self.languageDict.keys():
+            self.languageDict[language]["count"] += 1
+        else:
+            self.languageDict[language] = {"count": 1}
+
     def addZip(self, zipFilename):
         """
         Read statistics in zip file
@@ -108,22 +126,23 @@ class ConsultationZipHandler:
                 self.extensionDict[extension] = {"count": 1}
 
             # Language
-            languageSplit = ".".join(formName.split(".")[:-1]).split("_") #TODO: Split also on "." and "-"
-            if len(languageSplit) == 0:
-                language = "??"
-            else:
-                if len(languageSplit[-1]) < 5:
-                    language = languageSplit[-1].lower().strip("-").rstrip(".").lstrip("(").rstrip(")")
-                    if len(language) != 2:
-                        language = "??"
-                else:
-                    language = "??"
-            if language in (None, ""):
-                language = "??"
-            if language in self.languageDict.keys():
-                self.languageDict[language]["count"] += 1
-            else:
-                self.languageDict[language] = {"count": 1}
+            self.language(formName)
+            #languageSplit = ".".join(formName.split(".")[:-1]).split("_") #TODO: Split also on "." and "-"
+            #if len(languageSplit) == 0:
+            #    language = "??"
+            #else:
+            #    if len(languageSplit[-1]) < 5:
+            #        language = languageSplit[-1].lower().strip("-").rstrip(".").lstrip("(").rstrip(")")
+            #        if len(language) != 2:
+            #            language = "??"
+            #    else:
+            #        language = "??"
+            #if language in (None, ""):
+            #    language = "??"
+            #if language in self.languageDict.keys():
+            #    self.languageDict[language]["count"] += 1
+            #else:
+            #    self.languageDict[language] = {"count": 1}
 
     def analyze(self, randomize=False, showProgress=False, printNames=False, numProcesses=1, numberOfFiles=0, queueSize=100, filePattern="*", skip=0, wipeDatabase=False, convert2odt=False):
         if numberOfFiles == 0:
