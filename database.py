@@ -27,6 +27,12 @@ class Database():
                 print("Database not found, will not overwrite...")
             
 
+        if overwrite:
+            try:
+                os.remove(database)
+            except FileNotFoundError:
+                print("Could not find database-file, will not overwrite")
+
         self.conn = sqlite3.connect(database)
         self.cur = self.conn.cursor()
 
