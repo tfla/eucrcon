@@ -10,7 +10,7 @@ unicode better.
 # Note to self: Keep this script working with
 # both "python" (2.7.x) and "python3"!
 
-__author__ = "Henrik Laban Torstensson, Andreas Söderlund, Timmy Larsson, Niklas Bolmdahl"
+__author__ = "Henrik Laban Torstensson, Andreas Söderlund, Timmy Larsson, Niklas Bolmdahl, Drahflow"
 __license__ = "MIT"
 
 import argparse
@@ -26,7 +26,10 @@ import signal
 import sys
 import time
 import zipfile
+import re
+from hashlib import md5
 from shutil import rmtree
+from collections import defaultdict, deque
 
 if sys.version_info >= (3,):
     from io import BytesIO as FileLike
@@ -34,7 +37,7 @@ else:
     from cStringIO import StringIO as FileLike
 
 
-def processWorker(iq, oq):
+def typographicAnalyzeWorker(iq, oq):
     signal.signal(signal.SIGINT, signal.SIG_IGN) # Processes will receive SIGINT on Ctrl-C in main program. Just ignore it.
     for odtFilename, odtContent in iter(iq.get, "STOP"):
         resDict = {}
@@ -51,6 +54,111 @@ def processWorker(iq, oq):
         odtFile.close()
 
         oq.put(resDict)
+
+def normalizeWord(s):
+    return re.sub('[^a-zA-Z0-9äöüÄÖÜß]', '', s)
+
+def parseAnswers(text, questions, index, MATCHLEN):
+    answers = defaultdict(deque)
+
+    quesPos = None
+    currentyKey = questions[0][0]
+    words = text.split()
+    nWords = [normalizeWord(w) for w in words]
+
+    def locateInQuestions(pos, valid):
+        if pos >= len(nWords) - MATCHLEN: return None
+
+        for i in [i for i in index[nWords[pos]] if valid(i)]:
+            found = True
+            for j in range(0, MATCHLEN):
+                if nWords[pos + j] != questions[i + j][1]:
+                    found = False
+                    break
+            if found: return i + 1
+        return None
+
+    for textPos in range(0, len(words)):
+        if quesPos is not None:
+            if nWords[textPos] == questions[quesPos][1]:
+                quesPos = quesPos + 1
+            else:
+                newPos = locateInQuestions(textPos, lambda i: i >= quesPos + 1)
+                if newPos is None:
+                    newPos = locateInQuestions(textPos, lambda i: i < quesPos + 1)
+                quesPos = newPos
+        else:
+            quesPos = locateInQuestions(textPos, lambda i: True)
+
+        if quesPos is None or quesPos >= len(questions):
+            answers[currentyKey].append(words[textPos])
+        else:
+            if questions[quesPos][0] != '   ':
+                currentyKey = questions[quesPos][0]
+
+    for k in answers.keys():
+        # eliminate random footnote numbers
+        while answers[k] and re.match("^.?\\d+.?$", answers[k][0]):
+            answers[k].popleft()
+        while answers[k] and re.match("^.?\\d+.?$", answers[k][-1]):
+            answers[k].pop()
+
+        answers[k] = " ".join(answers[k])
+
+    return answers
+
+
+def textBasedAnalyzeWorker(iq, oq):
+    signal.signal(signal.SIGINT, signal.SIG_IGN) # Processes will receive SIGINT on Ctrl-C in main program. Just ignore it.
+
+    MATCHLEN = 7
+
+    questions = []
+    with open('consultation-document_en.dat', 'r') as consultation:
+        for line in consultation:
+            key = line[0:3]
+            for word in line[3:].split():
+                questions.append((key, normalizeWord(word)))
+
+    index = defaultdict(list)
+    for i in range(0, len(questions) - MATCHLEN):
+        index[questions[i][1]].append(i)
+
+    for filename, content in iter(iq.get, "STOP"):
+        tmpname = md5(filename.encode('utf-8')).hexdigest()
+        text = ''
+
+        fileending = filename.lower()[-5::]
+        if fileending.endswith(".pdf"):
+            try:
+                with open(tmpname + '.pdf', 'w') as pdf:
+                    if sys.version_info >= (3,):
+                        pdf.buffer.write(content)
+                    else:
+                        pdf.write(content)
+                # execline = 'unoconv -f odt -o ' + odtTempFileName + ' '+ thisTempFileName
+                subprocess.call('pdftotext %s.pdf %s.txt' % (tmpname, tmpname), shell=True)
+                with open(tmpname + '.txt', 'r') as txt:
+                    text = txt.read()
+            finally:
+                try:
+                    os.remove(tmpname + '.pdf')
+                    os.remove(tmpname + '.txt')
+                except:
+                    pass
+        else:
+            continue
+
+        answers = parseAnswers(text, questions, index, MATCHLEN)
+
+        print ("%s -------------------------" % (filename))
+        print (answers['600'] or "<600 unparsed>")
+        print (answers['020'] or "<020 unparsed>")
+
+        oq.put({
+            'name': answers['600'],
+            'answers': answers,
+        })
 
 
 class ConsultationZipHandler:
@@ -144,7 +252,7 @@ class ConsultationZipHandler:
             #else:
             #    self.languageDict[language] = {"count": 1}
 
-    def analyze(self, randomize=False, showProgress=False, printNames=False, numProcesses=1, numberOfFiles=0, queueSize=100, filePattern="*", skip=0, wipeDatabase=False, convert2odt=False):
+    def analyze(self, handleFile, worker, randomize=False, showProgress=False, printNames=False, numProcesses=1, numberOfFiles=0, queueSize=100, filePattern="*", skip=0, wipeDatabase=False, convert2odt=False):
         if numberOfFiles == 0:
             numOfFilesToAnalyze = self.getCount()
         else:
@@ -165,7 +273,7 @@ class ConsultationZipHandler:
         resultQueue = multiprocessing.Queue()
         processes = []
         for i in range(numProcesses):
-            process = multiprocessing.Process(name="{}".format(i + 1), target=processWorker, args=[inputQueue, resultQueue])
+            process = multiprocessing.Process(name="{}".format(i + 1), target=worker, args=[inputQueue, resultQueue])
             process.start()
             processes.append(process)
         startTime = time.time()
@@ -180,7 +288,6 @@ class ConsultationZipHandler:
                 if convert2odt:
                     tempdir = tempfile.mkdtemp(prefix="eucrcon-")
                 for filename in filter(lambda x: fnmatch.fnmatch(x.lower(), filePattern), filenames):
-                    fileending = filename.lower()[-5::]
                     if skip:
                         skip -= 1
                         continue
@@ -188,29 +295,12 @@ class ConsultationZipHandler:
                         print("Aborting after enqueuing {} files".format(numberOfFiles))
                         abort = True
                         break
-                    if fileending.endswith(".odt"):
-                        odtFilename = filename
-                        odtContent = zipFile.read(odtFilename)
-    
-                        inputQueue.put((odtFilename, odtContent))
-                    else:
-                        if not convert2odt:
-                            continue
-                        if fileending.endswith(".doc"):
-                            self.convertFiles(tempdir, zipFile, filename, inputQueue, ".doc")
-                        elif   fileending.endswith(".docx"):
-                            self.convertFiles(tempdir, zipFile, filename, inputQueue, ".docx")
-                        elif fileending.endswith(".rtf"):
-                            self.convertFiles(tempdir, zipFile, filename, inputQueue, ".rtf")
-                        elif fileending.endswith(".pdf"):
-                            self.convertFiles(tempdir, zipFile, filename, inputQueue, ".pdf")
-                        else: 
-                            continue 
+
                     if printNames:
-                        print("Enqueuing {}...".format(filename))
-                    
-                    
-                    
+                        print("Handling {}...".format(filename))
+
+                    handleFile(inputQueue, zipFile, filename)
+
                     count += 1
                     if showProgress:
                         if count % showProgress == 0:
@@ -267,7 +357,7 @@ class ConsultationZipHandler:
 
     def listFiles(self):
         return self.fileList
-    
+
     def getCount(self):
         return self.count
 
@@ -294,7 +384,7 @@ class ConsultationZipHandler:
         for (lang, langDict) in self.languageDict.items():
             resList.append((lang, langDict["count"]))
         return sorted(resList, reverse=True, key=lambda tup: tup[1])
-    
+
     def getExtensionCount(self):
         resList = []
         for (ext, extDict) in self.extensionDict.items():
@@ -368,12 +458,39 @@ def parse_args(availableCommands):
 
     return parser.parse_args()
 
+def typographicAnalyze(queue, zipFile, filename, convert2odt):
+    fileending = filename.lower()[-5::]
+    if fileending.endswith(".odt"):
+        odtFilename = filename
+        odtContent = zipFile.read(odtFilename)
+
+        queue.put((odtFilename, odtContent))
+
+    else:
+        if not convert2odt:
+            return
+        if fileending.endswith(".doc"):
+            self.convertFiles(tempdir, zipFile, filename, queue, ".doc")
+        elif   fileending.endswith(".docx"):
+            self.convertFiles(tempdir, zipFile, filename, queue, ".docx")
+        elif fileending.endswith(".rtf"):
+            self.convertFiles(tempdir, zipFile, filename, queue, ".rtf")
+        elif fileending.endswith(".pdf"):
+            self.convertFiles(tempdir, zipFile, filename, queue, ".pdf")
+        else:
+            return
+
+
+def textBasedAnalyze(queue, zipFile, filename):
+    content = zipFile.read(filename)
+    queue.put((filename, content))
+
 
 def main():
     """Main function for running the analyzer.
     Options will be parsed from the command line."""
 
-    availableCommands = ["analyze", "list-forms", "stats"]
+    availableCommands = ["analyze", "analyze_text", "list-forms", "stats"]
 
     args = parse_args(availableCommands)
 
@@ -413,7 +530,22 @@ def main():
         print("")
         count += zipHandler.getCount()
     elif args.command == "analyze":
-        zipHandler.analyze(numProcesses=args.processes,
+        zipHandler.analyze(lambda q, z, f: typographicAnalyze(q, z, f, args.convert2odt),
+                           typographicAnalyzeWorker,
+                           numProcesses=args.processes,
+                           randomize=args.randomize,
+                           showProgress=args.progress,
+                           printNames=args.printNames,
+                           numberOfFiles=args.numberOfFiles,
+                           queueSize=args.queueSize,
+                           filePattern=args.filePattern,
+                           skip=args.offset,
+                           convert2odt=args.convert2odt,
+                           wipeDatabase=args.wipeDatabase)
+    elif args.command == "analyze_text":
+        zipHandler.analyze(textBasedAnalyze,
+                           textBasedAnalyzeWorker,
+                           numProcesses=args.processes,
                            randomize=args.randomize,
                            showProgress=args.progress,
                            printNames=args.printNames,
